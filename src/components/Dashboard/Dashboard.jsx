@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTasks } from '../../context/TaskContext';
-import { getGreeting, getNextAction, getRecommendedTask, getAIRecommendationMessage, getStudyNextStep, getSortedStudyTasks, getTaskSuggestion, getSmartRecommendation, generateReminders } from '../../utils/messages';
-import { calculateRisk, getDaysUntilDeadline, getRiskColor, getTimeRemaining, isDueWithin24Hours, isDueWithin6Hours, getRiskExplanation, calculateRiskScore, getRiskLevel, getRiskLevelColor, calculateAcademicHealth, calculateStudyLoadForecast } from '../../utils/riskCalculator';
+import { getGreeting, getNextAction, getRecommendedTask, getAIRecommendationMessage, getStudyNextStep, getSortedStudyTasks, getTaskSuggestion, getSmartRecommendation, generateReminders, getStudentInsights } from '../../utils/messages';
+import { calculateRisk, getDaysUntilDeadline, getRiskColor, getTimeRemaining, isDueWithin24Hours, isDueWithin6Hours, getRiskExplanation, calculateRiskScore, getRiskLevel, getRiskLevelColor, calculateAcademicHealth, calculateStudyLoadForecast, getWorkloadSummary, getStudyMomentum, getDeadlineOverview } from '../../utils/riskCalculator';
 import { generateDemoTasks } from '../../utils/demoData';
 import ThemeToggle from '../ThemeToggle/ThemeToggle';
 import Icons from '../../utils/icons';
@@ -118,7 +118,7 @@ const Dashboard = () => {
     const task = tasks.find(t => t.id === taskId);
     if (task && !task.completed) {
       toggleComplete(taskId);
-      setCompletionToast('Well done! Task completed.');
+      setCompletionToast('Nice! One less thing to worry about.');
     } else {
       toggleComplete(taskId);
     }
@@ -155,7 +155,7 @@ const Dashboard = () => {
     return tasks.filter(task => {
       if (task.completed) return false;
       const daysLeft = getDaysUntilDeadline(task.deadline);
-      return daysLeft <= 3 && daysLeft >= 0;
+      return daysLeft <= 3; // includes overdue (negative) and due today (0)
     }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
   };
 
@@ -174,11 +174,11 @@ const Dashboard = () => {
   const completedTasks = getCompletedTasks();
 
   const getEncouragement = () => {
-    if (tasks.length === 0) return { text: "Ready to get started? Add your first task to begin tracking your deadlines." };
-    if (completedTasks.length === tasks.length && tasks.length > 0) return { text: "All tasks completed. Great work on finishing everything." };
+    if (tasks.length === 0) return { text: "Ready to get started? Add your first task and we'll help you stay on top of everything." };
+    if (completedTasks.length === tasks.length && tasks.length > 0) return { text: "All done \u2014 amazing work finishing everything!" };
     if (stats.highRiskTasks > 0) return { text: `You have ${stats.highRiskTasks} task${stats.highRiskTasks > 1 ? 's' : ''} that could use some attention. A small step today makes a big difference.` };
-    if (completedTasks.length > 0 && completedTasks.length >= tasks.length / 2) return { text: "Over halfway there \u2014 keep up the steady progress." };
-    return { text: "You're on track. A small step today will help you stay ahead." };
+    if (completedTasks.length > 0 && completedTasks.length >= tasks.length / 2) return { text: "Over halfway there \u2014 you're doing great. Keep going!" };
+    return { text: "You're on track. One small step today can reduce stress tomorrow." };
   };
 
   const encouragement = getEncouragement();
@@ -186,6 +186,10 @@ const Dashboard = () => {
   const academicHealth = calculateAcademicHealth(tasks);
   const smartRec = getSmartRecommendation(tasks);
   const loadForecast = calculateStudyLoadForecast(tasks);
+  const studentInsights = getStudentInsights(tasks);
+  const workload = getWorkloadSummary(tasks);
+  const momentum = getStudyMomentum(tasks);
+  const deadlineOverview = getDeadlineOverview(tasks);
 
   const handleLoadDemoData = () => {
     generateDemoTasks(addTask);
@@ -211,15 +215,14 @@ const Dashboard = () => {
   const getDueLabel = (deadline, completed) => {
     if (completed) return null;
     const daysLeft = getDaysUntilDeadline(deadline);
-    const now = new Date();
-    const deadlineDate = new Date(deadline);
-    const diffTime = deadlineDate - now;
-    const actualDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (actualDays < 0) return { text: 'Overdue', cls: 'overdue' };
-    if (actualDays === 0) return { text: 'Due today', cls: 'today' };
-    if (actualDays === 1) return { text: 'Due tomorrow', cls: 'tomorrow' };
-    if (actualDays <= 3) return { text: `Due in ${actualDays} days`, cls: 'in-3days' };
-    if (actualDays <= 7) return { text: `Due in ${actualDays} days`, cls: 'in-7days' };
+    if (daysLeft < 0) {
+      const overdueDays = Math.abs(daysLeft);
+      return { text: `Overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}`, cls: 'overdue' };
+    }
+    if (daysLeft === 0) return { text: 'Due today', cls: 'today' };
+    if (daysLeft === 1) return { text: 'Due tomorrow', cls: 'tomorrow' };
+    if (daysLeft <= 3) return { text: `Due in ${daysLeft} days`, cls: 'in-3days' };
+    if (daysLeft <= 7) return { text: `Due in ${daysLeft} days`, cls: 'in-7days' };
     return null;
   };
 
@@ -248,8 +251,8 @@ const Dashboard = () => {
     switch (level) {
       case 'Excellent': return 'Thriving';
       case 'Good': return 'On Track';
-      case 'Warning': return 'Needs a Push';
-      case 'Critical': return 'Time to Focus';
+      case 'Fair': return 'Needs a Push';
+      case 'Needs Attention': return 'Time to Focus';
       default: return level;
     }
   };
@@ -335,7 +338,7 @@ const Dashboard = () => {
             <h1 className="greeting-text">
               {getGreeting()}, {user?.name || 'Student'}
             </h1>
-            <p className="greeting-subtitle">Here's your day at a glance</p>
+            <p className="greeting-subtitle">Let's make today manageable.</p>
           </div>
         </div>
 
@@ -357,7 +360,7 @@ const Dashboard = () => {
             {/* Today's Focus */}
             <section className="todays-focus">
               <h2>Today's Focus</h2>
-              <p className="focus-helper">Your top priority right now.</p>
+              <p className="focus-helper">Your most important task right now — let's tackle this together.</p>
               
               {focusTask ? (
                 <div 
@@ -368,7 +371,7 @@ const Dashboard = () => {
                     {(() => {
                       const risk = calculateRisk(focusTask.deadline, focusTask.priority, focusTask.hoursPerDay);
                       const daysLeft = getDaysUntilDeadline(focusTask.deadline);
-                      const suggestion = getNextAction(risk, focusTask.name);
+                      const suggestion = getNextAction(risk, focusTask.name, daysLeft);
                       
                       return (
                         <>
@@ -379,7 +382,7 @@ const Dashboard = () => {
                               {Icons.calendar} Due: {formatDateShort(focusTask.deadline)}
                             </span>
                             <span className="focus-hero-meta-item">
-                              {Icons.clock} {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+                              {Icons.clock} {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}` : daysLeft === 0 ? 'Due today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
                             </span>
                             <span className="focus-hero-meta-item">
                               {Icons.book} {focusTask.hoursPerDay || 0}h/day
@@ -403,9 +406,9 @@ const Dashboard = () => {
                 <div className="focus-hero-card focus-hero-empty">
                   <div className="focus-hero-content" style={{ textAlign: 'center', alignItems: 'center' }}>
                     {renderRiskBadge('Low', 'md')}
-                    <h3 className="focus-hero-empty-title">You're all caught up</h3>
+                    <h3 className="focus-hero-empty-title">You're all caught up — nice work!</h3>
                     <p className="focus-hero-empty-text">
-                      Nothing urgent right now. Enjoy the breathing room, or add a new task when you're ready.
+                      Nothing urgent right now. Take a breather, or add a new task when you're ready.
                     </p>
                   </div>
                 </div>
@@ -435,15 +438,48 @@ const Dashboard = () => {
                     <h3>Academic Health</h3>
                     <span className={`health-level ${academicHealth.level.toLowerCase()}`}>{getHealthLevelLabel(academicHealth.level)}</span>
                     <p className="health-description">
-                      {academicHealth.level === 'Excellent' && 'Your academic workload is well managed. Great balance!'}
-                      {academicHealth.level === 'Good' && 'You\'re on track. Keep an eye on upcoming deadlines and you\'ll do great.'}
-                      {academicHealth.level === 'Warning' && 'A few tasks are coming up. Starting today will keep you ahead.'}
-                      {academicHealth.level === 'Critical' && 'Some tasks need your attention soon. A small step today can help you get back on track.'}
+                      {academicHealth.level === 'Excellent' && "You're doing great — your workload is well balanced. Keep it up!"}
+                      {academicHealth.level === 'Good' && "You're on track. A little consistency and you'll finish strong."}
+                      {academicHealth.level === 'Fair' && "A few deadlines are getting close. Starting today will keep you ahead."}
+                      {academicHealth.level === 'Needs Attention' && "Some tasks need you now — but don't panic. One small step today can make a big difference."}
                     </p>
+                    <p className="health-explanation">{academicHealth.explanation}</p>
+                    <div className="health-factors">
+                      {academicHealth.factors.overdueCount > 0 && (
+                        <span className="health-factor-tag overdue">{academicHealth.factors.overdueCount} overdue</span>
+                      )}
+                      {academicHealth.factors.completedCount > 0 && (
+                        <span className="health-factor-tag completed">{academicHealth.factors.completedCount} done</span>
+                      )}
+                      {academicHealth.factors.upcomingUrgent > 0 && (
+                        <span className="health-factor-tag urgent">{academicHealth.factors.upcomingUrgent} due soon</span>
+                      )}
+                      <span className="health-factor-tag hours">{academicHealth.factors.weeklyHours}h/week est.</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
+
+            {/* Student Success Companion */}
+            {studentInsights.length > 0 && (
+              <section className="companion-section">
+                <div className="companion-card">
+                  <div className="companion-header">
+                    <span className="companion-icon">{Icons.sparkles}</span>
+                    <h3>Student Success Companion</h3>
+                  </div>
+                  <div className="companion-insights">
+                    {studentInsights.map((insight, index) => (
+                      <div key={index} className={`companion-insight ${insight.tone}`}>
+                        <span className="companion-insight-icon">{Icons[insight.icon] || Icons.info}</span>
+                        <span className="companion-insight-text">{insight.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Today's Suggestion */}
             {smartRec && (
@@ -456,7 +492,7 @@ const Dashboard = () => {
                   <p className="recommendation-message">{smartRec.message}</p>
                   <div className="recommendation-meta">
                     <span className={`risk-badge sm ${smartRec.risk.toLowerCase()}`}>{smartRec.risk}</span>
-                    <span className="recommendation-days">{smartRec.daysLeft} day{smartRec.daysLeft !== 1 ? 's' : ''} left</span>
+                    <span className="recommendation-days">{smartRec.daysLeft < 0 ? `Overdue by ${Math.abs(smartRec.daysLeft)} day${Math.abs(smartRec.daysLeft) !== 1 ? 's' : ''}` : smartRec.daysLeft === 0 ? 'Due today' : `${smartRec.daysLeft} day${smartRec.daysLeft !== 1 ? 's' : ''} left`}</span>
                     <button className="recommendation-cta" onClick={() => navigate(`/task/${smartRec.task.id}`)}>
                       View Task {Icons.arrowRight}
                     </button>
@@ -485,15 +521,26 @@ const Dashboard = () => {
                 <div className="stat-icon-wrapper amber">{Icons.alertTriangle}</div>
                 <div className="stat-content">
                   <span className="stat-value">{stats.highRiskTasks}</span>
-                  <span className="stat-label">Needs Attention</span>
+                  <span className="stat-label">Needs Care</span>
                 </div>
               </div>
             </section>
 
+            {/* Overdue Summary Banner (when multiple overdue) */}
+            {reminders.overdueSummary && (
+              <div className="overdue-summary-banner">
+                <span className="overdue-summary-icon">{Icons.alertTriangle}</span>
+                <span className="overdue-summary-text">{reminders.overdueSummary}</span>
+              </div>
+            )}
+
             {/* Upcoming Tasks */}
             <section className="upcoming-section">
               <div className="section-header">
-                <h2>Coming Up</h2>
+                <div className="section-header-left">
+                  <h2>Coming Up</h2>
+                  <span className="coming-up-summary">{deadlineOverview.summary}</span>
+                </div>
                 <button className="section-header-action" onClick={() => setActivePage('tasks')}>
                   View All {Icons.arrowRight}
                 </button>
@@ -514,7 +561,7 @@ const Dashboard = () => {
                         <h4 className="upcoming-card-title">{task.name}</h4>
                         <div className="upcoming-card-meta">
                           <span className="upcoming-card-meta-item">{Icons.calendar} {formatDateShort(task.deadline)}</span>
-                          <span className="upcoming-card-meta-item">{Icons.clock} {daysLeft} day{daysLeft !== 1 ? 's' : ''} left</span>
+                          <span className="upcoming-card-meta-item">{Icons.clock} {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}` : daysLeft === 0 ? 'Due today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}</span>
                           <span className="upcoming-card-meta-item">{Icons.book} {task.hoursPerDay || 0}h/day</span>
                         </div>
                         {renderRiskBadge(risk, 'sm')}
@@ -690,7 +737,7 @@ const Dashboard = () => {
         {activePage === 'tasks' && (
           <section className="page-section">
             <h2>My Tasks</h2>
-<p className="page-description">Manage, filter, and track all your assignments.</p>
+<p className="page-description">All your tasks in one place. Filter, sort, and check things off.</p>
             <div className="filter-sort-controls">
               <div className="filter-group">
                 <label>Risk:</label>
@@ -771,7 +818,7 @@ const Dashboard = () => {
         {activePage === 'calendar' && (
           <section className="page-section">
             <h2>Calendar</h2>
-<p className="page-description">Your deadlines, organized by date.</p>
+<p className="page-description">Your deadlines at a glance. Click any task for details.</p>
             {tasks.length === 0 ? (
               <div className="empty-state">
                 <p>No tasks yet. Add a task to see it on the calendar.</p>
@@ -816,7 +863,7 @@ const Dashboard = () => {
         {activePage === 'study' && (
           <section className="page-section">
             <h2>Study Plan</h2>
-<p className="page-description">Your priorities, sorted. Tackle one thing at a time.</p>
+<p className="page-description">Your personalised study plan. Start with what matters most.</p>
             {(() => {
               const sortedStudyTasks = getSortedStudyTasks(incompleteTasks);
               if (sortedStudyTasks.length === 0) {
@@ -834,7 +881,7 @@ const Dashboard = () => {
                       <span className="study-ai-badge">YOUR STUDY PLAN</span>
                     </div>
                     <p>
-                      Here's your study plan, sorted by priority. Tackle high-priority tasks first for the best results.
+                      Here's a plan sorted by priority. Focus on one task at a time — that's all you need.
                     </p>
                   </div>
 
@@ -869,7 +916,7 @@ const Dashboard = () => {
                           </div>
                           <div className="study-task-meta">
                             <span>{Icons.calendar} Due: {formatDate(task.deadline)}</span>
-                            <span>{Icons.clock} {daysLeft} day{daysLeft !== 1 ? 's' : ''} left</span>
+                            <span>{Icons.clock} {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}` : daysLeft === 0 ? 'Due today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}</span>
                             <span>{Icons.book} {task.hoursPerDay || 0} hrs/day</span>
                           </div>
                           <p className="study-task-suggestion">{Icons.lightbulb} {suggestion}</p>
@@ -887,7 +934,68 @@ const Dashboard = () => {
         {activePage === 'stats' && (
           <section className="page-section">
             <h2>Your Progress</h2>
-            <p className="page-description">A quick look at how you're doing.</p>
+            <p className="page-description">Every task you complete is progress. Here's how you're tracking.</p>
+
+            {/* Completion Overview Card */}
+            <div className="progress-overview-card">
+              <div className="progress-overview-left">
+                <div className="completion-ring-wrapper">
+                  <svg className="completion-ring" viewBox="0 0 120 120">
+                    <circle className="completion-ring-bg" cx="60" cy="60" r="52" />
+                    <circle className="completion-ring-fill" cx="60" cy="60" r="52"
+                      style={{
+                        strokeDasharray: `${2 * Math.PI * 52}`,
+                        strokeDashoffset: `${2 * Math.PI * 52 * (1 - (tasks.length > 0 ? completedTasks.length / tasks.length : 0))}`,
+                      }}
+                    />
+                    <text x="60" y="55" className="completion-ring-value" textAnchor="middle" dominantBaseline="central">
+                      {tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%
+                    </text>
+                    <text x="60" y="72" className="completion-ring-label" textAnchor="middle" dominantBaseline="central">
+                      Complete
+                    </text>
+                  </svg>
+                </div>
+                <div className="progress-overview-info">
+                  <h3>Overall Completion</h3>
+                  <p className="progress-overview-desc">
+                    {completedTasks.length === 0 && tasks.length > 0
+                      ? "Ready to make your first mark? Complete a task to start building momentum."
+                      : completedTasks.length === tasks.length && tasks.length > 0
+                      ? "Incredible — you've completed everything! Take a moment to celebrate."
+                      : completedTasks.length >= tasks.length / 2
+                      ? `You've completed ${completedTasks.length} of ${tasks.length} tasks. You're more than halfway — keep going!`
+                      : `${completedTasks.length} of ${tasks.length} tasks done. Every completion is a step forward.`
+                    }
+                  </p>
+                  <div className="progress-milestone-badges">
+                    {completedTasks.length >= 1 && (
+                      <span className="milestone-badge achieved">{Icons.checkCircle} First Step</span>
+                    )}
+                    {completedTasks.length >= 3 && (
+                      <span className="milestone-badge achieved">{Icons.target} Building Momentum</span>
+                    )}
+                    {completedTasks.length >= 5 && (
+                      <span className="milestone-badge achieved">{Icons.trendingUp} On a Roll</span>
+                    )}
+                    {completedTasks.length === tasks.length && tasks.length > 0 && (
+                      <span className="milestone-badge achieved gold">{Icons.sparkles} All Clear</span>
+                    )}
+                    {completedTasks.length < 1 && (
+                      <span className="milestone-badge">{Icons.target} Complete your first task</span>
+                    )}
+                    {completedTasks.length >= 1 && completedTasks.length < 3 && (
+                      <span className="milestone-badge">{Icons.target} Complete 3 tasks</span>
+                    )}
+                    {completedTasks.length >= 3 && completedTasks.length < 5 && (
+                      <span className="milestone-badge">{Icons.trendingUp} Complete 5 tasks</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Grid */}
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon blue">{Icons.list}</div>
@@ -913,11 +1021,55 @@ const Dashboard = () => {
               <div className="stat-card">
                 <div className="stat-icon blue">{Icons.calendar}</div>
                 <div className="stat-content">
-                  <span className="stat-value">{stats.daysUntilNextDeadline !== null ? stats.daysUntilNextDeadline : '\u2014'}</span>
+                  <span className="stat-value">{stats.daysUntilNextDeadline !== null ? (stats.daysUntilNextDeadline < 0 ? `Overdue ${Math.abs(stats.daysUntilNextDeadline)}d` : `${stats.daysUntilNextDeadline}d`) : '\u2014'}</span>
                   <span className="stat-label">Next Due Date</span>
                 </div>
               </div>
             </div>
+
+            {/* Risk Breakdown */}
+            {tasks.length > 0 && (
+              <div className="risk-breakdown-card">
+                <h3 className="risk-breakdown-title">Risk Breakdown</h3>
+                <div className="risk-breakdown-bars">
+                  {(() => {
+                    const riskCounts = { High: 0, Medium: 0, Low: 0 };
+                    tasks.filter(t => !t.completed).forEach(t => {
+                      const r = calculateRisk(t.deadline, t.priority, t.hoursPerDay);
+                      riskCounts[r]++;
+                    });
+                    const total = riskCounts.High + riskCounts.Medium + riskCounts.Low;
+                    return total > 0 ? (
+                      <>
+                        <div className="risk-bar-row">
+                          <span className="risk-bar-label high">High</span>
+                          <div className="risk-bar-track">
+                            <div className="risk-bar-fill high" style={{ width: `${(riskCounts.High / total) * 100}%` }} />
+                          </div>
+                          <span className="risk-bar-count">{riskCounts.High}</span>
+                        </div>
+                        <div className="risk-bar-row">
+                          <span className="risk-bar-label medium">Medium</span>
+                          <div className="risk-bar-track">
+                            <div className="risk-bar-fill medium" style={{ width: `${(riskCounts.Medium / total) * 100}%` }} />
+                          </div>
+                          <span className="risk-bar-count">{riskCounts.Medium}</span>
+                        </div>
+                        <div className="risk-bar-row">
+                          <span className="risk-bar-label low">Low</span>
+                          <div className="risk-bar-track">
+                            <div className="risk-bar-fill low" style={{ width: `${(riskCounts.Low / total) * 100}%` }} />
+                          </div>
+                          <span className="risk-bar-count">{riskCounts.Low}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="risk-breakdown-empty">All tasks completed — no active risks!</p>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
 
           </section>
         )}
@@ -927,10 +1079,22 @@ const Dashboard = () => {
           <section className="page-section">
             <h2>Settings</h2>
 <p className="page-description">Personalize your experience.</p>
+            {/* Profile Card */}
+            <div className="settings-profile-card">
+              <div className="settings-profile-avatar">
+                {user?.name?.charAt(0).toUpperCase() || 'S'}
+              </div>
+              <div className="settings-profile-info">
+                <h3>{user?.name || 'Student'}</h3>
+                <p>{user?.email || 'student@example.com'}</p>
+              </div>
+              <span className="settings-profile-badge">Student Plan</span>
+            </div>
+
             <div className="settings-list">
               <div className="settings-item">
                 <div className="settings-info">
-                  <div className="settings-icon-wrapper">{Icons.palette}</div>
+                  <div className="settings-icon-wrapper blue">{Icons.palette}</div>
                   <div>
                     <h3>Theme</h3>
                     <p>Choose your preferred color scheme</p>
@@ -940,7 +1104,7 @@ const Dashboard = () => {
               </div>
               <div className="settings-item">
                 <div className="settings-info">
-                  <div className="settings-icon-wrapper">{Icons.user}</div>
+                  <div className="settings-icon-wrapper blue">{Icons.user}</div>
                   <div>
                     <h3>Account</h3>
                     <p>{user?.email || 'student@example.com'}</p>
@@ -949,7 +1113,7 @@ const Dashboard = () => {
               </div>
               <div className="settings-item">
                 <div className="settings-info">
-                  <div className="settings-icon-wrapper">{Icons.info}</div>
+                  <div className="settings-icon-wrapper blue">{Icons.info}</div>
                   <div>
                     <h3>App Version</h3>
                     <p>AssignTify v1.0.0</p>

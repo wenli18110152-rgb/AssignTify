@@ -113,7 +113,6 @@ export const TaskProvider = ({ children }) => {
       }, new Date(incompleteTasks[0].deadline));
       
       daysUntilNextDeadline = Math.ceil((nearestDeadline - new Date()) / (1000 * 60 * 60 * 24));
-      if (daysUntilNextDeadline < 0) daysUntilNextDeadline = 0;
     }
 
     return {

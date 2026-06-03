@@ -30,9 +30,9 @@ const TaskDetail = () => {
   const riskScore = calculateRiskScore(task.deadline, task.priority, task.hoursPerDay);
   const riskLevel = getRiskLevel(riskScore);
   const daysUntilDeadline = getDaysUntilDeadline(task.deadline);
-  const supportiveMessage = getSupportiveMessage(risk);
+  const supportiveMessage = getSupportiveMessage(risk, daysUntilDeadline);
   const whyItMatters = getWhyItMatters(risk, daysUntilDeadline);
-  const nextAction = getNextAction(risk, task.name);
+  const nextAction = getNextAction(risk, task.name, daysUntilDeadline);
   const reminderSuggestion = getReminderSuggestion(risk);
 
   const formatDate = (dateString) => {
@@ -113,7 +113,7 @@ const TaskDetail = () => {
                 <div className="info-content">
                   <span className="info-label">Time Remaining</span>
                   <span className="info-value">
-                    {daysUntilDeadline > 0 ? `${daysUntilDeadline} days` : 'Overdue!'}
+                    {daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)} day${Math.abs(daysUntilDeadline) !== 1 ? 's' : ''} overdue` : daysUntilDeadline === 0 ? 'Due today' : `${daysUntilDeadline} day${daysUntilDeadline !== 1 ? 's' : ''}`}
                   </span>
                 </div>
               </div>
@@ -121,7 +121,13 @@ const TaskDetail = () => {
           </div>
 
           {/* Supportive Message */}
-          {!task.completed && (
+          {task.completed ? (
+            <div className="completion-message">
+              <div className="completion-icon">{Icons.checkCircle}</div>
+              <h3>Great work!</h3>
+              <p>This task has been completed.</p>
+            </div>
+          ) : (
             <div className="supportive-section">
               <div className="supportive-icon">{Icons.messageCircle}</div>
               <p className="supportive-message">{supportiveMessage}</p>
@@ -148,14 +154,6 @@ const TaskDetail = () => {
             </>
           )}
 
-          {/* Completion Message */}
-          {task.completed && (
-            <div className="completion-message">
-              <div className="completion-icon">{Icons.checkCircle}</div>
-              <h3>Task completed</h3>
-              <p>You've successfully finished "{task.name}".</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

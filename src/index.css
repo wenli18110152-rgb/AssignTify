@@ -43,7 +43,7 @@ body {
   --primary-900: #0F1724;
   
   /* Theme-specific variables — warmer, calmer palette */
-  --bg-gradient: linear-gradient(160deg, #FFFFFF 0%, #FAFBFD 40%, #F5F7FA 100%);
+  --bg-gradient: linear-gradient(160deg, #F8FAFF 0%, #FAFCFE 35%, #F4F7FC 100%);
   --bg-sidebar: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
   --bg-card: #FFFFFF;
   --bg-card-hover: #FAFBFD;
@@ -60,6 +60,19 @@ body {
   /* Accent & Glow variables — softer */
   --accent-glow: rgba(59, 130, 246, 0.10);
   --accent-soft: rgba(59, 130, 246, 0.04);
+
+  /* Glassmorphism variables */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-blur: 16px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+
+  /* Gradient accents */
+  --gradient-blue: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #2563EB 100%);
+  --gradient-green: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+  --gradient-amber: linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%);
+  --gradient-purple: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%);
+  --gradient-rose: linear-gradient(135deg, #FDA4AF 0%, #F43F5E 100%);
   --sidebar-gradient: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
   --card-tint: rgba(59, 130, 246, 0.02);
   --focus-glow: rgba(59, 130, 246, 0.12);

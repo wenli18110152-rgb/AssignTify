@@ -4,6 +4,11 @@ export const calculateRisk = (deadline, priority, hoursPerDay) => {
   const deadlineDate = new Date(deadline);
   const daysUntilDeadline = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
   
+  // Overdue tasks are always high risk
+  if (daysUntilDeadline < 0) {
+    return 'High';
+  }
+  
   // High risk conditions
   if (daysUntilDeadline < 2) {
     return 'High';
@@ -30,12 +35,12 @@ export const calculateRisk = (deadline, priority, hoursPerDay) => {
   return 'Low';
 };
 
-// Get days until deadline
+// Get days until deadline (negative when overdue, 0 when due today)
 export const getDaysUntilDeadline = (deadline) => {
   const now = new Date();
   const deadlineDate = new Date(deadline);
   const days = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
-  return days > 0 ? days : 0;
+  return days;
 };
 
 // Get risk color for styling
@@ -64,7 +69,7 @@ export const getTimeRemaining = (deadline) => {
   const diffTime = deadlineDate - now;
   
   if (diffTime <= 0) {
-    return { overdue: true, text: 'Overdue!', urgent: true };
+    return { overdue: true, text: 'Overdue', urgent: true };
   }
   
   const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -120,30 +125,41 @@ export const getRiskExplanation = (deadline, priority, hoursPerDay) => {
   const deadlineDate = new Date(deadline);
   const daysUntilDeadline = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
   
+  // Overdue explanations
+  if (daysUntilDeadline < 0) {
+    const overdueDays = Math.abs(daysUntilDeadline);
+    return `Overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''} — consider updating the deadline or finishing up`;
+  }
+  
+  // Due today
+  if (daysUntilDeadline === 0) {
+    return `Due today — focus on one key section first`;
+  }
+  
   // High risk explanations
   if (daysUntilDeadline < 2) {
-    return `Due in ${daysUntilDeadline} day${daysUntilDeadline !== 1 ? 's' : ''} - very urgent!`;
+    return `Due in ${daysUntilDeadline} day${daysUntilDeadline !== 1 ? 's' : ''} — let's focus on this one`;
   }
   if (priority === 'High' && hoursPerDay < 4) {
-    return `High priority with only ${hoursPerDay}h/day study time`;
+    return `High priority with ${hoursPerDay}h/day — a bit more time would help`;
   }
   if (daysUntilDeadline < 3 && priority === 'High') {
-    return `High priority due in ${daysUntilDeadline} days`;
+    return `High priority due in ${daysUntilDeadline} days — you've got this`;
   }
   
   // Medium risk explanations
   if (daysUntilDeadline < 7) {
-    return `Due in ${daysUntilDeadline} days - plan your time`;
+    return `Due in ${daysUntilDeadline} days — you've got this with a bit of planning`;
   }
   if (priority === 'Medium' && hoursPerDay < 6) {
-    return `Medium priority with ${hoursPerDay}h/day study time`;
+    return `Medium priority with ${hoursPerDay}h/day — steady progress will get you there`;
   }
   if (priority === 'High' && hoursPerDay < 8) {
-    return `High priority needs more study time (${hoursPerDay}h/day)`;
+    return `High priority — a bit more study time would help (${hoursPerDay}h/day)`;
   }
   
   // Low risk
-  return `${daysUntilDeadline} days left with ${hoursPerDay}h/day - on track!`;
+  return `${daysUntilDeadline} days left with ${hoursPerDay}h/day — you're in great shape`;
 };
 
 // Calculate numeric risk score (0-100) for a single task
@@ -203,28 +219,54 @@ export const getRiskLevelColor = (level) => {
 
 // Calculate Academic Health Score (0-100) based on all tasks
 export const calculateAcademicHealth = (tasks) => {
-  if (!tasks || tasks.length === 0) return { score: 100, level: 'Excellent' };
+  if (!tasks || tasks.length === 0) {
+    return {
+      score: 100,
+      level: 'Excellent',
+      explanation: "No tasks yet — add your first assignment to start tracking your academic health.",
+      factors: { overdueCount: 0, completedCount: 0, totalCount: 0, upcomingUrgent: 0, weeklyHours: 0 }
+    };
+  }
 
+  const now = new Date();
   const incompleteTasks = tasks.filter(t => !t.completed);
   const completedTasks = tasks.filter(t => t.completed);
   const totalTasks = tasks.length;
+  const completedCount = completedTasks.length;
+  const overdueTasks = incompleteTasks.filter(t => new Date(t.deadline) < now);
+  const overdueCount = overdueTasks.length;
+
+  // Upcoming urgent: tasks due within 2 days
+  const upcomingUrgent = incompleteTasks.filter(t => {
+    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    return days >= 0 && days <= 2;
+  }).length;
+
+  // Weekly hours estimate
+  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
 
   let score = 100;
 
-  // Deduct for high-risk incomplete tasks
-  incompleteTasks.forEach(task => {
-    const risk = calculateRisk(task.deadline, task.priority, task.hoursPerDay);
-    if (risk === 'High') score -= 12;
-    else if (risk === 'Medium') score -= 4;
-  });
+  // Overdue penalty: -18 per overdue task (capped at -50)
+  score -= Math.min(overdueCount * 18, 50);
 
-  // Deduct for overdue tasks
-  const now = new Date();
-  const overdueCount = incompleteTasks.filter(t => new Date(t.deadline) < now).length;
-  score -= overdueCount * 15;
+  // Completion bonus: +2 per completed task (capped at +15)
+  score += Math.min(completedCount * 2, 15);
 
-  // Bonus for completion rate
-  const completionRate = totalTasks > 0 ? completedTasks.length / totalTasks : 0;
+  // Upcoming deadline pressure: -5 per task due within 2 days, -3 per task due within 7 days
+  const urgent7 = incompleteTasks.filter(t => {
+    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    return days >= 0 && days <= 7;
+  }).length;
+  score -= upcomingUrgent * 5;
+  score -= Math.max(0, urgent7 - upcomingUrgent) * 3;
+
+  // Workload balance penalty
+  if (weeklyHours > 30) score -= 10;
+  else if (weeklyHours > 20) score -= 5;
+
+  // Completion rate bonus
+  const completionRate = totalTasks > 0 ? completedCount / totalTasks : 0;
   if (completionRate >= 0.8) score += 10;
   else if (completionRate >= 0.5) score += 5;
 
@@ -233,10 +275,146 @@ export const calculateAcademicHealth = (tasks) => {
   let level;
   if (score >= 80) level = 'Excellent';
   else if (score >= 60) level = 'Good';
-  else if (score >= 40) level = 'Warning';
-  else level = 'Critical';
+  else if (score >= 40) level = 'Fair';
+  else level = 'Needs Attention';
 
-  return { score, level };
+  // Generate explanation
+  let explanation = '';
+  if (overdueCount > 0) {
+    const overdueNames = overdueTasks.map(t => t.name);
+    const mainOverdue = overdueNames[0];
+    explanation = `${overdueCount} overdue task${overdueCount > 1 ? 's' : ''} — starting with "${mainOverdue}" will boost your score.`;
+  } else if (upcomingUrgent > 0) {
+    explanation = `${upcomingUrgent} task${upcomingUrgent > 1 ? 's' : ''} due within 48 hours. Staying focused now keeps you on track.`;
+  } else if (completionRate >= 0.8) {
+    explanation = `Excellent progress — ${completedCount} of ${totalTasks} tasks complete. Keep it up!`;
+  } else if (incompleteTasks.length > 0) {
+    explanation = `${completedCount} of ${totalTasks} tasks complete. Steady progress will keep your score healthy.`;
+  } else {
+    explanation = `All tasks completed — outstanding work!`;
+  }
+
+  return {
+    score,
+    level,
+    explanation,
+    factors: {
+      overdueCount,
+      completedCount,
+      totalCount: totalTasks,
+      upcomingUrgent,
+      weeklyHours: Math.round(weeklyHours)
+    }
+  };
+};
+
+// Get workload summary for the week
+export const getWorkloadSummary = (tasks) => {
+  if (!tasks || tasks.length === 0) {
+    return { totalWeeklyHours: 0, busiestDay: null, busiestDayHours: 0, activeTasks: 0, load: 'Balanced' };
+  }
+
+  const now = new Date();
+  const incompleteTasks = tasks.filter(t => !t.completed);
+  const totalWeeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
+
+  // Find busiest day in next 7
+  let busiestDay = null;
+  let busiestDayHours = 0;
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + i);
+    let dayHours = 0;
+    incompleteTasks.forEach(task => {
+      const deadline = new Date(task.deadline);
+      const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
+      if (daysUntil >= 0 && daysUntil <= 3) {
+        dayHours += task.hoursPerDay || 1;
+      }
+    });
+    if (dayHours > busiestDayHours) {
+      busiestDayHours = dayHours;
+      busiestDay = date.toLocaleDateString('en-US', { weekday: 'long' });
+    }
+  }
+
+  let load = 'Balanced';
+  if (totalWeeklyHours > 30) load = 'Heavy';
+  else if (totalWeeklyHours > 20) load = 'Busy';
+
+  return {
+    totalWeeklyHours: Math.round(totalWeeklyHours * 10) / 10,
+    busiestDay,
+    busiestDayHours: Math.round(busiestDayHours * 10) / 10,
+    activeTasks: incompleteTasks.length,
+    load
+  };
+};
+
+// Get study momentum indicator
+export const getStudyMomentum = (tasks) => {
+  if (!tasks || tasks.length === 0) {
+    return { status: 'idle', label: 'Ready to Start', description: 'Add your first task to begin building momentum.' };
+  }
+
+  const now = new Date();
+  const completedTasks = tasks.filter(t => t.completed);
+  const incompleteTasks = tasks.filter(t => !t.completed);
+  const overdueTasks = incompleteTasks.filter(t => new Date(t.deadline) < now);
+  const completionRate = tasks.length > 0 ? completedTasks.length / tasks.length : 0;
+
+  // Check for recent completions (tasks completed recently - approximate)
+  if (completionRate >= 0.8) {
+    return { status: 'excellent', label: 'On Fire', description: `Incredible — ${completedTasks.length} of ${tasks.length} tasks done. You're nearly there!` };
+  }
+  if (overdueTasks.length > 2) {
+    return { status: 'struggling', label: 'Needs Focus', description: `${overdueTasks.length} overdue tasks — tackling one right now can turn things around.` };
+  }
+  if (overdueTasks.length > 0) {
+    return { status: 'behind', label: 'Catch Up Mode', description: `${overdueTasks.length} overdue — start with the nearest deadline to get back on track.` };
+  }
+  if (completionRate >= 0.5) {
+    return { status: 'building', label: 'Building Momentum', description: `${completedTasks.length} tasks done — you're more than halfway. Keep going!` };
+  }
+  if (completedTasks.length > 0) {
+    return { status: 'started', label: 'Getting Started', description: `${completedTasks.length} task${completedTasks.length > 1 ? 's' : ''} completed — every step forward counts.` };
+  }
+  if (incompleteTasks.length > 0) {
+    return { status: 'ready', label: 'Ready to Go', description: `${incompleteTasks.length} task${incompleteTasks.length > 1 ? 's' : ''} waiting — start with one small step today.` };
+  }
+  return { status: 'idle', label: 'All Clear', description: 'Everything is done — take a well-earned break!' };
+};
+
+// Get upcoming deadline overview
+export const getDeadlineOverview = (tasks) => {
+  if (!tasks || tasks.length === 0) {
+    return { total: 0, overdue: 0, dueToday: 0, dueThisWeek: 0, summary: 'No upcoming deadlines.' };
+  }
+
+  const now = new Date();
+  const incompleteTasks = tasks.filter(t => !t.completed);
+  const overdue = incompleteTasks.filter(t => new Date(t.deadline) < now).length;
+  const dueToday = incompleteTasks.filter(t => {
+    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    return days === 0;
+  }).length;
+  const dueThisWeek = incompleteTasks.filter(t => {
+    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    return days >= 0 && days <= 7;
+  }).length;
+
+  let summary = '';
+  if (overdue > 0) {
+    summary = `${overdue} overdue · ${dueThisWeek} due this week`;
+  } else if (dueToday > 0) {
+    summary = `${dueToday} due today · ${dueThisWeek} due this week`;
+  } else if (dueThisWeek > 0) {
+    summary = `${dueThisWeek} deadline${dueThisWeek > 1 ? 's' : ''} this week`;
+  } else {
+    summary = 'All clear for the next 7 days';
+  }
+
+  return { total: incompleteTasks.length, overdue, dueToday, dueThisWeek, summary };
 };
 
 // Calculate study load forecast for the next 7 days

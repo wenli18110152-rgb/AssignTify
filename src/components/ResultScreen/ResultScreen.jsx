@@ -19,9 +19,9 @@ const ResultScreen = () => {
 
   const risk = calculateRisk(taskData.deadline, taskData.priority, hoursPerDay);
   const daysUntilDeadline = getDaysUntilDeadline(taskData.deadline);
-  const supportiveMessage = getSupportiveMessage(risk);
+  const supportiveMessage = getSupportiveMessage(risk, daysUntilDeadline);
   const whyItMatters = getWhyItMatters(risk, daysUntilDeadline);
-  const nextAction = getNextAction(risk, taskData.name);
+  const nextAction = getNextAction(risk, taskData.name, daysUntilDeadline);
   const reminderSuggestion = getReminderSuggestion(risk);
 
   const formatDate = (dateString) => {

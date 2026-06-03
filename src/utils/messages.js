@@ -1,30 +1,42 @@
 // Supportive messages for different risk levels
 const highRiskMessages = [
-  "This one's coming up fast! Let's break it into smaller steps together. You've got this.",
-  "Time is tight, but you're capable of great things under pressure. Focus on one task at a time.",
-  "Deep breath — you've handled tough deadlines before. Let's create a clear action plan right now.",
-  "It's crunch time, but remember: progress over perfection. Every step forward counts.",
-  "The deadline is close, but so is your ability to rise to the challenge. Let's tackle this together."
+  "This one's coming up fast — but you've got this. Let's break it into small steps.",
+  "Time is tight, but you're more capable than you think. Focus on one thing at a time.",
+  "Deep breath — you've handled tight deadlines before. Let's take it one step at a time.",
+  "It's crunch time, but remember: progress over perfection. Every little bit counts.",
+  "The deadline is close, but so is your ability to push through. You've got this."
+];
+
+const overdueMessages = [
+  "It's not too late — break the remaining work into small chunks and tackle the most critical part first.",
+  "This one's past the deadline, but a focused effort now can still make a real difference.",
+  "Don't worry about being late — focus on what you can do right now. Every step forward counts.",
+  "Overdue doesn't mean over. Start with the most important part and build from there.",
+  "Let's get this done — focus on the essentials and you'll make progress today."
 ];
 
 const mediumRiskMessages = [
-  "You're in a good position! A little focused effort each day will get you there smoothly.",
-  "Nice timing! You have enough room to work at a comfortable pace. Keep up the steady progress.",
-  "Good news — you're not in the danger zone yet. Consistent daily effort will make this manageable.",
-  "You've got a reasonable timeline. Stay consistent and you'll finish with confidence.",
-  "Perfect balance of time and effort needed. You're on track for success."
+  "You're in a good spot. A little focused effort each day and you'll be just fine.",
+  "Nice timing — you've got enough room to work at a comfortable pace. Keep it up.",
+  "Good news: you're not in the danger zone yet. A bit of steady effort will get you there.",
+  "You've got a reasonable timeline. Stay consistent and you'll finish strong.",
+  "You're on track. Just keep showing up — that's all it takes."
 ];
 
 const lowRiskMessages = [
-  "Plenty of time! Consider starting early to reduce future stress. Your future self will thank you.",
-  "You're ahead of the game! Use this buffer to create something you're truly proud of.",
-  "Great planning! You've given yourself plenty of breathing room. Enjoy the process.",
-  "Excellent timing! You can work at your own pace and still finish with time to spare.",
-  "You're in control! This is a great opportunity to work without pressure."
+  "Plenty of time! Starting early means less stress later — your future self will thank you.",
+  "You're ahead of the game. Use this breathing room to do your best work.",
+  "Great planning — you've given yourself plenty of time. Enjoy the process.",
+  "You can work at your own pace here. No rush, no pressure.",
+  "You're in a great spot. A small start now keeps things easy later."
 ];
 
 // Get a random message from the appropriate array
-export const getSupportiveMessage = (risk) => {
+export const getSupportiveMessage = (risk, daysUntilDeadline) => {
+  // Use overdue-specific messages for overdue tasks
+  if (daysUntilDeadline !== undefined && daysUntilDeadline < 0) {
+    return overdueMessages[Math.floor(Math.random() * overdueMessages.length)];
+  }
   let messages;
   switch (risk) {
     case 'High':
@@ -44,29 +56,46 @@ export const getSupportiveMessage = (risk) => {
 
 // Get "why this matters" explanation
 export const getWhyItMatters = (risk, daysUntilDeadline) => {
+  // Overdue tasks
+  if (daysUntilDeadline < 0) {
+    const overdueDays = Math.abs(daysUntilDeadline);
+    return `This task is overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}. Consider updating the deadline or prioritising the remaining work.`;
+  }
+  // Due today
+  if (daysUntilDeadline === 0) {
+    return `This task is due today. Focus on one key section first and make progress where you can.`;
+  }
   switch (risk) {
     case 'High':
-      return `With only ${daysUntilDeadline} day${daysUntilDeadline !== 1 ? 's' : ''} left, starting now gives you the best chance of completing this task well. Delaying could lead to rushed work and unnecessary stress.`;
+      return `With ${daysUntilDeadline} day${daysUntilDeadline !== 1 ? 's' : ''} left, starting now gives you the best shot at finishing well. You've got this.`;
     case 'Medium':
-      return `You have ${daysUntilDeadline} days remaining. Starting soon will help you maintain quality while staying on track. A steady pace now prevents a sprint later.`;
+      return `You have ${daysUntilDeadline} days left. A steady pace now means no stressful rush later.`;
     case 'Low':
-      return `With ${daysUntilDeadline} days until deadline, you have the luxury of time. Starting early means you can refine your work and handle any unexpected challenges.`;
+      return `With ${daysUntilDeadline} days until deadline, you've got time on your side. Starting early means less stress and better work.`;
     default:
-      return "Planning ahead always helps reduce stress and improve quality.";
+      return "A little planning goes a long way — you'll thank yourself later.";
   }
 };
 
 // Get next action suggestion
-export const getNextAction = (risk, taskName) => {
+export const getNextAction = (risk, taskName, daysUntilDeadline) => {
+  // Overdue tasks
+  if (daysUntilDeadline !== undefined && daysUntilDeadline < 0) {
+    return `"${taskName}" is overdue — break the remaining work into small chunks and tackle the most critical part first.`;
+  }
+  // Due today
+  if (daysUntilDeadline === 0) {
+    return `"${taskName}" is due today. Focus on one key section first — even a small effort counts.`;
+  }
   switch (risk) {
     case 'High':
-      return `Start working on "${taskName}" immediately. Break it into 30-minute chunks and tackle the hardest part first.`;
+      return `Let's start on "${taskName}" now — break it into 30-minute chunks and tackle the hardest part first.`;
     case 'Medium':
-      return `Schedule 1-2 hours today to begin "${taskName}". Create a simple outline or gather your resources.`;
+      return `Set aside 1–2 hours today for "${taskName}". A simple outline or quick research session is a great start.`;
     case 'Low':
-      return `Spend 30 minutes this week to plan "${taskName}". A small start now sets you up for success later.`;
+      return `Spend 30 minutes this week planning "${taskName}". A small start now makes everything easier later.`;
     default:
-      return `Take the first step on "${taskName}" today, even if it's just planning.`;
+      return `Take the first step on "${taskName}" today — even a small one counts.`;
   }
 };
 
@@ -115,28 +144,49 @@ export const getRecommendedTask = (tasks) => {
 // Get a friendly message explaining why this task is recommended
 export const getAIRecommendationMessage = (task, risk, daysLeft) => {
   const name = `"${task.name}"`;
-  const dayText = `day${daysLeft !== 1 ? 's' : ''}`;
+  const absDays = Math.abs(daysLeft);
+  const dayText = `day${absDays !== 1 ? 's' : ''}`;
+
+  // Overdue tasks
+  if (daysLeft < 0) {
+    return `${name} is overdue by ${absDays} ${dayText}. Consider updating the deadline or prioritising the remaining work.`;
+  }
+
+  // Due today
+  if (daysLeft === 0) {
+    return `${name} is due today. Focus on one key section first. You've got this.`;
+  }
 
   if (risk === 'High') {
-    if (daysLeft <= 1) {
-      return `Heads up! ${name} is due ${daysLeft === 0 ? 'today' : 'tomorrow'} and it's high priority. This one needs your attention right now — let's tackle it first.`;
+    if (daysLeft === 1) {
+      return `Heads up — ${name} is due tomorrow. Let's focus on this one first. You've got this.`;
     }
-    return `${name} is high priority with only ${daysLeft} ${dayText} left. I'd recommend focusing on this one first to stay ahead of the deadline.`;
+    return `${name} is high priority with only ${daysLeft} ${dayText} left. Tackling this first will take a big weight off your shoulders.`;
   }
 
   if (risk === 'Medium') {
-    return `${name} has a medium priority and ${daysLeft} ${dayText} until due. Getting a head start now will make things much easier later — let's work on this.`;
+    return `${name} has ${daysLeft} ${dayText} left. Starting now means a more relaxed finish — let's get going.`;
   }
 
   if (daysLeft <= 3) {
-    return `${name} is coming up in ${daysLeft} ${dayText}. It's low priority, but starting early never hurts! A small session today keeps you on track.`;
+    return `${name} is coming up in ${daysLeft} ${dayText}. It's low priority, but a quick session today keeps things easy.`;
   }
-  return `${name} has plenty of time left (${daysLeft} ${dayText}), but starting early means less stress later. A quick review session could be a great start.`;
+  return `${name} has plenty of time (${daysLeft} ${dayText}). A quick look now means less stress later.`;
 };
 
 // Get a simple next-step study suggestion
 export const getStudyNextStep = (task, risk, daysLeft) => {
   const hours = task.hoursPerDay || 1;
+
+  // Overdue tasks
+  if (daysLeft < 0) {
+    return `Break the remaining work into small chunks and tackle the most critical part first. A focused session now can still make a difference.`;
+  }
+
+  // Due today
+  if (daysLeft === 0) {
+    return `Start a focused ${Math.min(hours, 2)}-hour session right now. Focus on one key section first.`;
+  }
 
   if (risk === 'High') {
     if (daysLeft <= 1) {
@@ -170,30 +220,36 @@ export const getSmartRecommendation = (tasks) => {
   });
 
   const task = sorted[0];
-  const daysLeft = Math.max(0, Math.ceil((new Date(task.deadline) - new Date()) / (1000 * 60 * 60 * 24)));
+  const daysLeft = Math.ceil((new Date(task.deadline) - new Date()) / (1000 * 60 * 60 * 24));
   const risk = getRiskLevelFromDays(daysLeft, task.priority, task.hoursPerDay);
 
   let reason = '';
-  if (daysLeft <= 1) {
-    reason = `it's due ${daysLeft === 0 ? 'today' : 'tomorrow'} and needs a quick check-in`;
+  if (daysLeft < 0) {
+    const overdueDays = Math.abs(daysLeft);
+    reason = `it's overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''} and needs your attention`;
+  } else if (daysLeft === 0) {
+    reason = `it's due today and could use your attention`;
+  } else if (daysLeft <= 1) {
+    reason = `it's due tomorrow and could use your attention`;
   } else if (daysLeft <= 3) {
-    reason = `it's coming up in ${daysLeft} days — a little effort now will help a lot`;
+    reason = `it's coming up in ${daysLeft} days — a little effort now goes a long way`;
   } else if (task.priority === 'High') {
     reason = `it's important and getting ahead now means less stress later`;
   } else {
-    reason = `starting early keeps you comfortable and in control`;
+    reason = `starting early keeps you feeling in control`;
   }
 
   return {
     task,
     risk,
     daysLeft,
-    message: `A good next step is "${task.name}" because ${reason}.`
+    message: `A great next step is "${task.name}" — ${reason}.`
   };
 };
 
 // Helper: get risk level from days/priority/hours (mirrors calculateRisk)
 const getRiskLevelFromDays = (days, priority, hours) => {
+  if (days < 0) return 'High'; // Overdue
   if (days < 2) return 'High';
   if (priority === 'High' && hours < 4) return 'High';
   if (days < 3 && priority === 'High') return 'High';
@@ -203,15 +259,15 @@ const getRiskLevelFromDays = (days, priority, hours) => {
   return 'Low';
 };
 
-// Generate reminders based on task due dates
+// Generate reminders based on task due dates (smarter, task-context-aware)
 export const generateReminders = (tasks) => {
   if (!tasks || tasks.length === 0) {
-    return { reminders: [], summary: "You're on track. No urgent deadlines right now.", count: 0 };
+    return { reminders: [], summary: "You're on track — no urgent deadlines right now.", overdueSummary: '', count: 0 };
   }
 
   const incompleteTasks = tasks.filter(t => !t.completed);
   if (incompleteTasks.length === 0) {
-    return { reminders: [], summary: "You're on track. No urgent deadlines right now.", count: 0 };
+    return { reminders: [], summary: "You're on track — no urgent deadlines right now.", overdueSummary: '', count: 0 };
   }
 
   const reminders = [];
@@ -221,22 +277,31 @@ export const generateReminders = (tasks) => {
     const deadline = new Date(task.deadline);
     const diffTime = deadline - now;
     const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const focus = getTaskFocus(task.description);
 
     let category, message;
 
     if (daysLeft < 0) {
       category = 'overdue';
       const overdueDays = Math.abs(daysLeft);
-      message = `"${task.name}" was due ${overdueDays} day${overdueDays !== 1 ? 's' : ''} ago. It's not too late to make progress.`;
+      if (focus) {
+        message = `"${task.name}" is overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}. Start with: ${focus}`;
+      } else {
+        message = `"${task.name}" is overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}. Consider updating the deadline or prioritising the remaining work.`;
+      }
     } else if (daysLeft === 0) {
       category = 'today';
-      message = `"${task.name}" is due today. You've got this \u2014 even a small effort counts.`;
+      if (focus) {
+        message = `"${task.name}" is due today. Focus on: ${focus}`;
+      } else {
+        message = `"${task.name}" is due today. Focus on one key section first.`;
+      }
     } else if (daysLeft === 1) {
       category = 'tomorrow';
-      message = `"${task.name}" is due tomorrow. A quick session today will help.`;
+      message = `"${task.name}" is due tomorrow. Starting today will reduce last-minute stress.`;
     } else if (daysLeft <= 3) {
       category = 'in-3days';
-      message = `"${task.name}" is due in ${daysLeft} days. A small study session today will help you stay ahead.`;
+      message = `"${task.name}" is due in ${daysLeft} days. Completing one section today will reduce pressure later.`;
     } else if (daysLeft <= 7) {
       category = 'in-7days';
       message = `"${task.name}" is due in ${daysLeft} days. Consider starting your prep soon.`;
@@ -258,23 +323,146 @@ export const generateReminders = (tasks) => {
   reminders.sort((a, b) => categoryOrder[a.category] - categoryOrder[b.category]);
 
   // Generate summary based on most urgent reminder
-  let summary = "You're on track. No urgent deadlines right now.";
+  let summary = "You're on track — no urgent deadlines right now.";
   if (reminders.length > 0) {
-    const mostUrgent = reminders[0];
-    if (mostUrgent.category === 'overdue') {
-      summary = mostUrgent.message;
-    } else if (mostUrgent.category === 'today') {
-      summary = mostUrgent.message;
-    } else if (mostUrgent.category === 'tomorrow') {
-      summary = mostUrgent.message;
-    } else if (mostUrgent.category === '3days') {
-      summary = mostUrgent.message;
+    summary = reminders[0].message;
+  }
+
+  // Generate overdue summary for multi-overdue situations
+  const overdueReminders = reminders.filter(r => r.category === 'overdue');
+  let overdueSummary = '';
+  if (overdueReminders.length >= 2) {
+    overdueSummary = `You currently have ${overdueReminders.length} overdue tasks. Focus on ${overdueReminders[0].taskName} first.`;
+  }
+
+  return { reminders, summary, overdueSummary, count: reminders.length };
+};
+
+// Generate Student Success Companion insights
+export const getStudentInsights = (tasks) => {
+  if (!tasks || tasks.length === 0) return [];
+
+  const now = new Date();
+  const incompleteTasks = tasks.filter(t => !t.completed);
+  const completedTasks = tasks.filter(t => t.completed);
+  const totalCount = tasks.length;
+  const overdueTasks = incompleteTasks.filter(t => new Date(t.deadline) < now);
+  const overdueCount = overdueTasks.length;
+  const completionRate = totalCount > 0 ? completedTasks.length / totalCount : 0;
+  const upcomingUrgent = incompleteTasks.filter(t => {
+    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    return days >= 0 && days <= 2;
+  });
+
+  const insights = [];
+
+  // Risk spotlight — always show the highest-risk incomplete task
+  if (overdueCount > 0) {
+    const mostOverdue = overdueTasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline))[0];
+    const overdueDays = Math.abs(Math.ceil((new Date(mostOverdue.deadline) - now) / (1000 * 60 * 60 * 24)));
+    insights.push({
+      icon: 'alertTriangle',
+      text: `Your biggest risk right now is ${mostOverdue.name} — it's overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}.`,
+      tone: 'action'
+    });
+  } else if (upcomingUrgent.length > 0) {
+    const urgentTask = upcomingUrgent[0];
+    const daysLeft = Math.ceil((new Date(urgentTask.deadline) - now) / (1000 * 60 * 60 * 24));
+    insights.push({
+      icon: 'target',
+      text: `Your biggest focus right now is ${urgentTask.name} — ${daysLeft === 0 ? 'due today' : `due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}.`,
+      tone: 'action'
+    });
+  }
+
+  // Completion encouragement
+  if (overdueCount === 0 && completionRate > 0 && completionRate < 1) {
+    const remaining = totalCount - completedTasks.length;
+    if (remaining <= 3) {
+      insights.push({
+        icon: 'trendingUp',
+        text: `Just ${remaining} task${remaining !== 1 ? 's' : ''} to go — completing ${remaining === 1 ? 'it' : 'them'} will boost your Academic Health Score.`,
+        tone: 'encouraging'
+      });
     } else {
-      summary = mostUrgent.message;
+      insights.push({
+        icon: 'trendingUp',
+        text: `Completing 1 more task this week would improve your Academic Health Score.`,
+        tone: 'encouraging'
+      });
     }
   }
 
-  return { reminders, summary, count: reminders.length };
+  // Active subjects awareness
+  const uniqueSubjects = [...new Set(incompleteTasks.map(t => t.name.split(' — ')[0].split(' Assignment')[0].split(' Exam')[0].trim()))];
+  if (uniqueSubjects.length >= 3) {
+    insights.push({
+      icon: 'sparkles',
+      text: `You're managing ${uniqueSubjects.length} active subjects — great balance across your workload.`,
+      tone: 'awareness'
+    });
+  }
+
+  // Momentum celebration
+  if (completedTasks.length >= 3 && completionRate < 0.8) {
+    insights.push({
+      icon: 'checkCircle',
+      text: `You've completed ${completedTasks.length} tasks — keep that momentum going!`,
+      tone: 'encouraging'
+    });
+  }
+
+  // Workload awareness
+  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
+  if (weeklyHours > 25 && incompleteTasks.length > 0) {
+    insights.push({
+      icon: 'clock',
+      text: `Your estimated weekly study load is ${Math.round(weeklyHours)} hours — consider spreading tasks across more days.`,
+      tone: 'awareness'
+    });
+  }
+
+  // Multiple overdue warning
+  if (overdueCount >= 3) {
+    insights.push({
+      icon: 'alertTriangle',
+      text: `You currently have ${overdueCount} overdue tasks. Focus on the nearest deadline first.`,
+      tone: 'action'
+    });
+  }
+
+  // Deadline cluster warning
+  if (upcomingUrgent.length >= 2) {
+    insights.push({
+      icon: 'target',
+      text: `You have ${upcomingUrgent.length} deadlines within the next 48 hours. Consider prioritising ${upcomingUrgent[0].name}.`,
+      tone: 'action'
+    });
+  }
+
+  // Progress nudge
+  if (completionRate >= 0.6 && completionRate < 1) {
+    const pct = Math.round(completionRate * 100);
+    insights.push({
+      icon: 'trendingUp',
+      text: `You're ${pct}% through your tasks. One more push and you'll cross the finish line.`,
+      tone: 'encouraging'
+    });
+  }
+
+  // Fallback for tasks with no urgency
+  if (insights.length === 0 && incompleteTasks.length > 0) {
+    insights.push({
+      icon: 'sparkles',
+      text: `${incompleteTasks.length} task${incompleteTasks.length !== 1 ? 's' : ''} on your plate — a small step today keeps everything manageable.`,
+      tone: 'encouraging'
+    });
+  }
+
+  // Return top 3 most relevant insights (action first, then encouraging, then awareness)
+  const toneOrder = { action: 0, encouraging: 1, awareness: 2 };
+  insights.sort((a, b) => (toneOrder[a.tone] ?? 1) - (toneOrder[b.tone] ?? 1));
+  return insights.slice(0, 3);
 };
 
 // Sort all tasks by priority then deadline
@@ -309,17 +497,46 @@ export const getTaskSuggestion = (task, risk, daysLeft) => {
   const desc = task.description ? task.description.trim() : '';
   const focus = getTaskFocus(desc);
 
-  // High risk + urgent (0-1 days)
+  // Overdue tasks
+  if (daysLeft < 0) {
+    const overdueDays = Math.abs(daysLeft);
+    if (focus) {
+      return pick([
+        `"${name}" is overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}. Focus on: ${focus} Break the remaining work into small chunks and tackle the most critical part first.`,
+        `Overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''} — but it's not too late. Work on: ${focus} A focused session now can still make a difference.`,
+      ]);
+    }
+    return pick([
+      `"${name}" is overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}. Break the remaining work into small chunks and tackle the most critical part first.`,
+      `Overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''} — but it's not too late. Focus on one key section and make progress where you can.`,
+    ]);
+  }
+
+  // Due today
+  if (daysLeft === 0) {
+    if (focus) {
+      return pick([
+        `Due today! Focus on: ${focus} Get a working version done first — you can polish later. Even 30 minutes counts.`,
+        `"${name}" is due today. Start with: ${focus} A focused effort now can still get you across the line.`,
+      ]);
+    }
+    return pick([
+      `"${name}" is due today! Open it up, focus on one key section, and make progress. Even 30 minutes counts.`,
+      `Today's the day for "${name}" — tackle the most important part first. You've got this.`,
+    ]);
+  }
+
+  // High risk + urgent (1 day)
   if (risk === 'High' && daysLeft <= 1) {
     if (focus) {
       return pick([
-        `Due ${daysLeft === 0 ? 'today' : 'tomorrow'}! Focus on: ${focus} Skip perfection — get a working version done first, then polish. Even 30 minutes counts.`,
+        `Due tomorrow! Focus on: ${focus} Skip perfection — get a working version done first, then polish. Even 30 minutes counts.`,
         `Time's almost up on "${name}"! Based on your description, start with: ${focus} Get the core done now — you can refine later.`,
         `"${name}" needs your attention RIGHT NOW. Tackle: ${focus} Build from there — a rough draft today beats a perfect one tomorrow.`,
       ]);
     }
     return pick([
-      `This is due ${daysLeft === 0 ? 'today' : 'tomorrow'}! Open it up, write a quick outline of the key points, and start filling them in. Even 30 minutes counts.`,
+      `This is due tomorrow! Open it up, write a quick outline of the key points, and start filling them in. Even 30 minutes counts.`,
       `Time's almost up on "${name}" — skip the perfectionism and get a rough draft done first. You can polish it later!`,
       `"${name}" needs your attention RIGHT NOW. Start by listing what's required, then tackle the most important part first. You've got this.`,
     ]);

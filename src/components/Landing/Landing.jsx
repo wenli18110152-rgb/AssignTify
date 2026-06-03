@@ -32,13 +32,13 @@ const Landing = () => {
         {/* Hero Section */}
         <section className="hero">
           <div className="hero-content">
-            <div className="hero-badge">Study Companion</div>
+            <div className="hero-badge">Your Study Companion</div>
             <h1 className="hero-title">
               Start today, stress less tomorrow.
             </h1>
             <p className="hero-subtitle">
               AssignTify helps students organise deadlines, focus on one task at
-              a time, and feel more in control during busy study periods.
+              a time, and feel more in control during busy study periods — without the overwhelm.
             </p>
             <div className="hero-buttons">
               <button
@@ -125,21 +125,21 @@ const Landing = () => {
         <section className="features">
           <h2 className="features-title">How AssignTify helps</h2>
           <p className="features-subtitle">
-            Designed to help you feel organised and supported — not overwhelmed.
+              Designed to help you feel calm, organised, and in control — not overwhelmed.
           </p>
           <div className="features-grid">
             <div className="feature-card card-animate">
               <div className="feature-icon-wrapper blue">{Icons.target}</div>
               <h3>Today's Focus</h3>
               <p>
-                See exactly which task matters most right now — no guesswork.
+                See exactly which task matters most right now — no guesswork, no stress.
               </p>
             </div>
             <div className="feature-card card-animate">
               <div className="feature-icon-wrapper purple">{Icons.bell}</div>
               <h3>Gentle Reminders</h3>
               <p>
-                Get calm, timely nudges before deadlines creep up on you.
+                Calm, timely nudges before deadlines creep up. No alarms, just awareness.
               </p>
             </div>
             <div className="feature-card card-animate">
@@ -161,7 +161,7 @@ const Landing = () => {
 
         {/* Footer */}
         <footer className="landing-footer">
-          <p>AssignTify &copy; {new Date().getFullYear()} — Built for students</p>
+          <p>AssignTify &copy; {new Date().getFullYear()} — Built for students, with care</p>
         </footer>
       </div>
     </div>
