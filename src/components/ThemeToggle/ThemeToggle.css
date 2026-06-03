@@ -1,0 +1,114 @@
+.theme-toggle {
+  position: relative;
+  z-index: 50;
+}
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+  transform: none;
+}
+
+.theme-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.theme-name {
+  font-size: 13px;
+}
+
+.dropdown-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.theme-dropdown {
+  position: relative;
+  margin-top: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  min-width: 190px;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.theme-option:hover {
+  background: var(--primary-50);
+  transform: none;
+}
+
+.theme-option.active {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.option-name {
+  flex: 1;
+  text-align: left;
+}
+
+.check-mark {
+  display: flex;
+  align-items: center;
+  color: var(--text-accent);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .theme-toggle-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .theme-name {
+    display: none;
+  }
+
+  .theme-dropdown {
+    min-width: 160px;
+  }
+}
