@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTasks } from '../../context/TaskContext';
 import { getGreeting, getNextAction, getRecommendedTask, getAIRecommendationMessage, getStudyNextStep, getSortedStudyTasks, getTaskSuggestion, getSmartRecommendation, generateReminders, getStudentInsights } from '../../utils/messages';
-import { calculateRisk, getDaysUntilDeadline, getRiskColor, getTimeRemaining, isDueWithin24Hours, isDueWithin6Hours, getRiskExplanation, calculateRiskScore, getRiskLevel, getRiskLevelColor, calculateAcademicHealth, calculateStudyLoadForecast, getWorkloadSummary, getStudyMomentum, getDeadlineOverview } from '../../utils/riskCalculator';
-import { generateDemoTasks } from '../../utils/demoData';
+import { calculateRisk, getDaysUntilDeadline, getRiskColor, getTimeRemaining, isDueWithin24Hours, isDueWithin6Hours, getRiskExplanation, calculateRiskScore, getRiskLevel, getRiskLevelColor, calculateAcademicHealth, calculateStudyLoadForecast, getWorkloadSummary, getStudyMomentum, getDeadlineOverview, getWeeklyInsights } from '../../utils/riskCalculator';
 import ThemeToggle from '../ThemeToggle/ThemeToggle';
 import Icons from '../../utils/icons';
 import './Dashboard.css';
@@ -20,7 +19,10 @@ const Dashboard = () => {
     getTasksSortedByDeadline,
     getHighRiskTasks,
     toggleComplete,
-    deleteTask 
+    deleteTask,
+    enterDemoMode,
+    exitDemoMode,
+    isDemoMode
   } = useTasks();
 
   const [filterRisk, setFilterRisk] = useState('all');
@@ -88,13 +90,11 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Animate health ring from 0 on mount
   useEffect(() => {
     const timer = setTimeout(() => setHealthRingReady(true), 150);
     return () => clearTimeout(timer);
   }, []);
 
-  // Close bell dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (bellRef.current && !bellRef.current.contains(e.target)) {
@@ -105,7 +105,6 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-dismiss completion toast
   useEffect(() => {
     if (completionToast) {
       const timer = setTimeout(() => setCompletionToast(null), 2200);
@@ -113,7 +112,6 @@ const Dashboard = () => {
     }
   }, [completionToast]);
 
-  // Wrapped toggle with toast
   const handleToggleComplete = (taskId) => {
     const task = tasks.find(t => t.id === taskId);
     if (task && !task.completed) {
@@ -155,7 +153,7 @@ const Dashboard = () => {
     return tasks.filter(task => {
       if (task.completed) return false;
       const daysLeft = getDaysUntilDeadline(task.deadline);
-      return daysLeft <= 3; // includes overdue (negative) and due today (0)
+      return daysLeft <= 3;
     }).sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
   };
 
@@ -190,9 +188,14 @@ const Dashboard = () => {
   const workload = getWorkloadSummary(tasks);
   const momentum = getStudyMomentum(tasks);
   const deadlineOverview = getDeadlineOverview(tasks);
+  const weeklyInsights = getWeeklyInsights(tasks);
 
   const handleLoadDemoData = () => {
-    generateDemoTasks(addTask);
+    enterDemoMode();
+  };
+
+  const handleExitDemoMode = () => {
+    exitDemoMode();
   };
 
   const getFocusTask = () => {
@@ -211,7 +214,6 @@ const Dashboard = () => {
   const aiMessage = recommendedTask ? getAIRecommendationMessage(recommendedTask, recommendedRisk, recommendedDaysLeft) : '';
   const studyNextStep = recommendedTask ? getStudyNextStep(recommendedTask, recommendedRisk, recommendedDaysLeft) : '';
 
-  // Helper: get due label for a task
   const getDueLabel = (deadline, completed) => {
     if (completed) return null;
     const daysLeft = getDaysUntilDeadline(deadline);
@@ -256,6 +258,23 @@ const Dashboard = () => {
       default: return level;
     }
   };
+
+  // Generate conversational study buddy messages
+  const getStudyBuddyMessages = () => {
+    const messages = [];
+    if (smartRec) {
+      messages.push({ text: smartRec.message, type: 'suggestion' });
+    }
+    studentInsights.forEach(insight => {
+      messages.push({ text: insight.text, type: insight.tone });
+    });
+    if (messages.length === 0 && tasks.length > 0) {
+      messages.push({ text: `${incompleteTasks.length} task${incompleteTasks.length !== 1 ? 's' : ''} on your plate — a small step today keeps everything manageable.`, type: 'encouraging' });
+    }
+    return messages.slice(0, 4);
+  };
+
+  const buddyMessages = getStudyBuddyMessages();
 
   return (
     <div className="dashboard">
@@ -332,174 +351,221 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="dashboard-main">
-        {/* Greeting */}
-        <div className="greeting-section">
-          <div>
-            <h1 className="greeting-text">
-              {getGreeting()}, {user?.name || 'Student'}
-            </h1>
-            <p className="greeting-subtitle">Let's make today manageable.</p>
-          </div>
-        </div>
 
         {/* Dashboard Page */}
         {activePage === 'dashboard' && (
           <>
-            {/* Reminder Banner */}
-            <div className={`reminder-banner ${reminders.count === 0 ? 'clear' : reminders.reminders[0].category}`}>
-              <span className="reminder-banner-icon">{reminders.count === 0 ? Icons.checkCircle : Icons.bell}</span>
-              <span className="reminder-banner-text">{reminders.summary}</span>
-            </div>
+            {/* ═══════════ ZONE 1: PREMIUM HERO ═══════════ */}
+            <section className="premium-hero">
+              <div className="hero-gradient-bg">
+                <div className="hero-content-wrapper">
+                  {/* Left: Greeting + Focus */}
+                  <div className="hero-left">
+                    <div className="hero-greeting-area">
+                      <h1 className="hero-greeting">
+                        {getGreeting()}, {user?.name || 'Student'}
+                      </h1>
+                      <p className="hero-subtitle">{encouragement.text}</p>
+                    </div>
 
-            {/* Info Banner */}
-            <div className="info-banner">
-              <span className="info-banner-icon">{Icons.info}</span>
-              <span className="info-banner-text">{encouragement.text}</span>
-            </div>
+                    {/* Reminder pill */}
+                    {reminders.count > 0 && (
+                      <div className={`hero-reminder-pill ${reminders.reminders[0].category}`}>
+                        <span className="hero-reminder-dot" />
+                        <span>{reminders.summary}</span>
+                      </div>
+                    )}
 
-            {/* Today's Focus */}
-            <section className="todays-focus">
-              <h2>Today's Focus</h2>
-              <p className="focus-helper">Your most important task right now — let's tackle this together.</p>
-              
-              {focusTask ? (
-                <div 
-                  className="focus-hero-card"
-                  onClick={() => navigate(`/task/${focusTask.id}`)}
-                >
-                  <div className="focus-hero-content">
-                    {(() => {
-                      const risk = calculateRisk(focusTask.deadline, focusTask.priority, focusTask.hoursPerDay);
-                      const daysLeft = getDaysUntilDeadline(focusTask.deadline);
-                      const suggestion = getNextAction(risk, focusTask.name, daysLeft);
-                      
-                      return (
-                        <>
-                          {renderRiskBadge(risk, 'md')}
-                          <h3 className="focus-hero-title">{focusTask.name}</h3>
-                          <div className="focus-hero-meta">
-                            <span className="focus-hero-meta-item">
-                              {Icons.calendar} Due: {formatDateShort(focusTask.deadline)}
-                            </span>
-                            <span className="focus-hero-meta-item">
-                              {Icons.clock} {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''}` : daysLeft === 0 ? 'Due today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
-                            </span>
-                            <span className="focus-hero-meta-item">
-                              {Icons.book} {focusTask.hoursPerDay || 0}h/day
-                            </span>
-                          </div>
-                          <div className="focus-hero-suggestion">
-                            {Icons.lightbulb} {suggestion}
-                          </div>
-                          <button 
-                            className="focus-hero-cta"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/task/${focusTask.id}`); }}
-                          >
-                            View Details {Icons.arrowRight}
-                          </button>
-                        </>
-                      );
-                    })()}
+                    {/* Focus task */}
+                    {focusTask ? (
+                      <div className="hero-focus-card" onClick={() => navigate(`/task/${focusTask.id}`)}>
+                        {(() => {
+                          const risk = calculateRisk(focusTask.deadline, focusTask.priority, focusTask.hoursPerDay);
+                          const daysLeft = getDaysUntilDeadline(focusTask.deadline);
+                          return (
+                            <>
+                              <div className="hero-focus-top">
+                                {renderRiskBadge(risk, 'sm')}
+                                <span className="hero-focus-deadline">
+                                  {Icons.clock} {daysLeft < 0 ? `Overdue ${Math.abs(daysLeft)}d` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
+                                </span>
+                              </div>
+                              <h3 className="hero-focus-name">{focusTask.name}</h3>
+                              <p className="hero-focus-suggestion">{getNextAction(risk, focusTask.name, daysLeft)}</p>
+                              <button className="hero-focus-cta" onClick={(e) => { e.stopPropagation(); navigate(`/task/${focusTask.id}`); }}>
+                                View Details {Icons.arrowRight}
+                              </button>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="hero-focus-card hero-focus-empty">
+                        <h3 className="hero-focus-empty-title">You're all caught up</h3>
+                        <p className="hero-focus-empty-text">Nothing urgent right now. Take a breather, or add a new task.</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="focus-hero-card focus-hero-empty">
-                  <div className="focus-hero-content" style={{ textAlign: 'center', alignItems: 'center' }}>
-                    {renderRiskBadge('Low', 'md')}
-                    <h3 className="focus-hero-empty-title">You're all caught up — nice work!</h3>
-                    <p className="focus-hero-empty-text">
-                      Nothing urgent right now. Take a breather, or add a new task when you're ready.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </section>
 
-            {/* Academic Health Score */}
-            <section className="academic-health-section">
-              <div className="health-card">
-                <div className="health-left">
-                  <div className="health-ring-wrapper">
-                    <svg className="health-ring" viewBox="0 0 80 80">
-                      <circle className="health-ring-bg" cx="40" cy="40" r="34" />
-                      <circle className="health-ring-fill" cx="40" cy="40" r="34"
-                        style={{
-                          strokeDasharray: `${2 * Math.PI * 34}`,
-                          strokeDashoffset: healthRingReady ? `${2 * Math.PI * 34 * (1 - academicHealth.score / 100)}` : `${2 * Math.PI * 34}`,
-                          stroke: academicHealth.score >= 80 ? '#10B981' : academicHealth.score >= 60 ? '#3B82F6' : academicHealth.score >= 40 ? '#F59E0B' : '#EF4444'
-                        }}
-                      />
-                      <text x="40" y="40" className="health-ring-text" textAnchor="middle" dominantBaseline="central">
-                        {academicHealth.score}
-                      </text>
-                    </svg>
-                  </div>
-                  <div className="health-info">
-                    <h3>Academic Health</h3>
-                    <span className={`health-level ${academicHealth.level.toLowerCase()}`}>{getHealthLevelLabel(academicHealth.level)}</span>
-                    <p className="health-description">
-                      {academicHealth.level === 'Excellent' && "You're doing great — your workload is well balanced. Keep it up!"}
-                      {academicHealth.level === 'Good' && "You're on track. A little consistency and you'll finish strong."}
-                      {academicHealth.level === 'Fair' && "A few deadlines are getting close. Starting today will keep you ahead."}
-                      {academicHealth.level === 'Needs Attention' && "Some tasks need you now — but don't panic. One small step today can make a big difference."}
-                    </p>
-                    <p className="health-explanation">{academicHealth.explanation}</p>
-                    <div className="health-factors">
+                  {/* Right: Health Score */}
+                  <div className="hero-right">
+                    <div className="hero-health-ring-wrapper">
+                      <svg className="hero-health-ring" viewBox="0 0 120 120">
+                        <circle className="hero-health-ring-bg" cx="60" cy="60" r="52" />
+                        <circle className="hero-health-ring-fill" cx="60" cy="60" r="52"
+                          style={{
+                            strokeDasharray: `${2 * Math.PI * 52}`,
+                            strokeDashoffset: healthRingReady ? `${2 * Math.PI * 52 * (1 - academicHealth.score / 100)}` : `${2 * Math.PI * 52}`,
+                            stroke: academicHealth.score >= 80 ? '#34D399' : academicHealth.score >= 60 ? '#60A5FA' : academicHealth.score >= 40 ? '#FBBF24' : '#F87171'
+                          }}
+                        />
+                        <text x="60" y="54" className="hero-health-score-text" textAnchor="middle" dominantBaseline="central">
+                          {academicHealth.score}
+                        </text>
+                        <text x="60" y="72" className="hero-health-label-text" textAnchor="middle" dominantBaseline="central">
+                          Health
+                        </text>
+                      </svg>
+                    </div>
+                    <span className={`hero-health-level ${academicHealth.level.toLowerCase()}`}>{getHealthLevelLabel(academicHealth.level)}</span>
+                    <div className="hero-health-factors">
                       {academicHealth.factors.overdueCount > 0 && (
-                        <span className="health-factor-tag overdue">{academicHealth.factors.overdueCount} overdue</span>
+                        <span className="hero-health-tag overdue">{academicHealth.factors.overdueCount} overdue</span>
                       )}
                       {academicHealth.factors.completedCount > 0 && (
-                        <span className="health-factor-tag completed">{academicHealth.factors.completedCount} done</span>
+                        <span className="hero-health-tag done">{academicHealth.factors.completedCount} done</span>
                       )}
                       {academicHealth.factors.upcomingUrgent > 0 && (
-                        <span className="health-factor-tag urgent">{academicHealth.factors.upcomingUrgent} due soon</span>
+                        <span className="hero-health-tag urgent">{academicHealth.factors.upcomingUrgent} due soon</span>
                       )}
-                      <span className="health-factor-tag hours">{academicHealth.factors.weeklyHours}h/week est.</span>
+                      <span className="hero-health-tag hours">{academicHealth.factors.weeklyHours}h/wk</span>
                     </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Student Success Companion */}
-            {studentInsights.length > 0 && (
-              <section className="companion-section">
-                <div className="companion-card">
-                  <div className="companion-header">
-                    <span className="companion-icon">{Icons.sparkles}</span>
-                    <h3>Student Success Companion</h3>
+            {/* ═══════════ ZONE 2: STUDENT SUCCESS COACH + INSIGHTS ═══════════ */}
+            <div className="insights-zone">
+              {/* Left: Student Success Coach */}
+              <section className="study-buddy-section">
+                <div className="study-buddy-card">
+                  <div className="study-buddy-header">
+                    <div className="study-buddy-avatar">
+                      {Icons.coach}
+                    </div>
+                    <div className="study-buddy-title-area">
+                      <h3>Student Success Coach</h3>
+                      <span className="study-buddy-subtitle">AI-powered academic guidance</span>
+                    </div>
                   </div>
-                  <div className="companion-insights">
-                    {studentInsights.map((insight, index) => (
-                      <div key={index} className={`companion-insight ${insight.tone}`}>
-                        <span className="companion-insight-icon">{Icons[insight.icon] || Icons.info}</span>
-                        <span className="companion-insight-text">{insight.text}</span>
+                  <div className="study-buddy-messages">
+                    {buddyMessages.map((msg, index) => (
+                      <div key={index} className={`buddy-message ${msg.type}`}>
+                        <div className="buddy-message-avatar">
+                          {Icons.coach}
+                        </div>
+                        <div className="buddy-message-bubble">
+                          <p>{msg.text}</p>
+                        </div>
                       </div>
                     ))}
+                    {buddyMessages.length === 0 && (
+                      <div className="buddy-message encouraging">
+                        <div className="buddy-message-avatar">
+                          {Icons.coach}
+                        </div>
+                        <div className="buddy-message-bubble">
+                          <p>Add your first task and I'll provide personalised study recommendations.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
-            )}
 
-            {/* Today's Suggestion */}
-            {smartRec && (
-              <section className="recommendation-section">
-                <div className="recommendation-card">
-                  <div className="recommendation-header">
-                    <span className="recommendation-icon">{Icons.target}</span>
-                    <h3>Today's Suggestion</h3>
+              {/* Right: Insights Panel */}
+              <aside className="insights-panel">
+                {/* Workload Balance */}
+                {tasks.length > 0 && (
+                  <div className="insight-mini-card">
+                    <div className="insight-mini-header">
+                      <span className="insight-mini-icon">{Icons.scale}</span>
+                      <span className="insight-mini-title">Workload</span>
+                      <span className={`insight-mini-badge ${workload.load.toLowerCase()}`}>{workload.load}</span>
+                    </div>
+                    <div className="insight-mini-bar-track">
+                      <div className={`insight-mini-bar-fill ${workload.load.toLowerCase()}`}
+                        style={{ width: `${Math.min((workload.totalWeeklyHours / 40) * 100, 100)}%` }} />
+                    </div>
+                    <span className="insight-mini-stat">{workload.totalWeeklyHours}h/week &middot; {workload.activeTasks} tasks</span>
                   </div>
-                  <p className="recommendation-message">{smartRec.message}</p>
-                  <div className="recommendation-meta">
-                    <span className={`risk-badge sm ${smartRec.risk.toLowerCase()}`}>{smartRec.risk}</span>
-                    <span className="recommendation-days">{smartRec.daysLeft < 0 ? `Overdue by ${Math.abs(smartRec.daysLeft)} day${Math.abs(smartRec.daysLeft) !== 1 ? 's' : ''}` : smartRec.daysLeft === 0 ? 'Due today' : `${smartRec.daysLeft} day${smartRec.daysLeft !== 1 ? 's' : ''} left`}</span>
-                    <button className="recommendation-cta" onClick={() => navigate(`/task/${smartRec.task.id}`)}>
-                      View Task {Icons.arrowRight}
-                    </button>
+                )}
+
+                {/* Study Momentum */}
+                {tasks.length > 0 && (
+                  <div className="insight-mini-card">
+                    <div className="insight-mini-header">
+                      <span className="insight-mini-icon">{Icons.activity}</span>
+                      <span className="insight-mini-title">Momentum</span>
+                      <span className={`insight-mini-badge ${momentum.status}`}>{momentum.label}</span>
+                    </div>
+                    <div className="insight-mini-bar-track">
+                      <div className={`insight-mini-bar-fill ${momentum.status}`}
+                        style={{ width: `${momentum.progressPercent}%` }} />
+                    </div>
+                    <span className="insight-mini-stat">{momentum.progressPercent}% complete &middot; Next: {momentum.nextMilestone}</span>
                   </div>
-                </div>
-              </section>
-            )}
+                )}
+
+                {/* Weekly Chart */}
+                {tasks.length > 0 && weeklyInsights.dailyHours && (
+                  <div className="insight-mini-card">
+                    <div className="insight-mini-header">
+                      <span className="insight-mini-icon">{Icons.barChart}</span>
+                      <span className="insight-mini-title">This Week</span>
+                      <span className="insight-mini-stat-inline">{weeklyInsights.totalWeekHours}h total</span>
+                    </div>
+                    <div className="insight-mini-chart">
+                      {weeklyInsights.dailyHours.map((day, i) => {
+                        const maxH = Math.max(...weeklyInsights.dailyHours.map(d => d.hours), 1);
+                        const pct = (day.hours / maxH) * 100;
+                        const barCls = day.hours <= 3 ? 'balanced' : day.hours <= 7 ? 'busy' : 'overloaded';
+                        return (
+                          <div key={i} className="mini-bar-col">
+                            <div className="mini-bar-track">
+                              <div className={`mini-bar ${barCls}`} style={{ height: `${Math.max(pct, 4)}%` }} />
+                            </div>
+                            <span className="mini-bar-label">{day.day}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Deadline Summary */}
+                {tasks.length > 0 && deadlineOverview.deadlines && deadlineOverview.deadlines.length > 0 && (
+                  <div className="insight-mini-card">
+                    <div className="insight-mini-header">
+                      <span className="insight-mini-icon">{Icons.flag}</span>
+                      <span className="insight-mini-title">Deadlines</span>
+                    </div>
+                    <div className="insight-mini-deadlines">
+                      {deadlineOverview.deadlines.slice(0, 4).map(dl => (
+                        <div key={dl.id} className={`mini-deadline-item risk-${dl.risk.toLowerCase()}`}
+                          onClick={() => navigate(`/task/${dl.id}`)}>
+                          <span className="mini-deadline-name">{dl.name}</span>
+                          <span className="mini-deadline-days">
+                            {dl.daysLeft < 0 ? `${Math.abs(dl.daysLeft)}d late` : dl.daysLeft === 0 ? 'Today' : `${dl.daysLeft}d`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
 
             {/* Summary Stats */}
             <section className="summary-stats">
@@ -507,7 +573,7 @@ const Dashboard = () => {
                 <div className="stat-icon-wrapper blue">{Icons.list}</div>
                 <div className="stat-content">
                   <span className="stat-value">{stats.totalTasks}</span>
-<span className="stat-label">Active</span>
+                  <span className="stat-label">Active</span>
                 </div>
               </div>
               <div className="stat-card completed-tasks">
@@ -526,7 +592,20 @@ const Dashboard = () => {
               </div>
             </section>
 
-            {/* Overdue Summary Banner (when multiple overdue) */}
+            {/* Demo Mode Banner */}
+            {isDemoMode && (
+              <div className="demo-mode-banner">
+                <div className="demo-mode-banner-content">
+                  <span className="demo-mode-banner-icon">{Icons.info}</span>
+                  <span className="demo-mode-banner-text">Demo Mode Active — You are viewing sample tasks</span>
+                </div>
+                <button className="demo-mode-exit-btn" onClick={handleExitDemoMode}>
+                  Exit Demo Mode
+                </button>
+              </div>
+            )}
+
+            {/* Overdue Summary Banner */}
             {reminders.overdueSummary && (
               <div className="overdue-summary-banner">
                 <span className="overdue-summary-icon">{Icons.alertTriangle}</span>
@@ -625,16 +704,17 @@ const Dashboard = () => {
                       <button className="add-task-btn-header" onClick={() => navigate('/add-task')}>
                         {Icons.plus} Create Your First Task
                       </button>
-                      <button className="demo-data-btn" onClick={handleLoadDemoData}>
-                        {Icons.download} Load Sample University Data
+                      <button className="demo-data-btn" onClick={isDemoMode ? handleExitDemoMode : handleLoadDemoData}>
+                        {Icons.download} {isDemoMode ? 'Exit Demo Mode' : 'Try Demo Mode'}
                       </button>
                     </div>
                     <div className="onboarding-examples">
                       <h4>Example tasks you can track:</h4>
                       <div className="example-tasks">
-                        <div className="example-task high"><span className="example-dot" />BUS4012 Assignment 3 — <em>High Risk</em></div>
-                        <div className="example-task medium"><span className="example-dot" />Business Analytics Report — <em>Medium Risk</em></div>
-                        <div className="example-task low"><span className="example-dot" />Exam Revision Session — <em>Low Risk</em></div>
+                        <div className="example-task high"><span className="example-dot" />Research Essay — <em>High Risk</em></div>
+                        <div className="example-task medium"><span className="example-dot" />Group Presentation — <em>Medium Risk</em></div>
+                        <div className="example-task medium"><span className="example-dot" />Statistics Quiz — <em>Medium Risk</em></div>
+                        <div className="example-task low"><span className="example-dot" />Final Exam Revision — <em>Low Risk</em></div>
                       </div>
                     </div>
                   </div>
@@ -737,7 +817,7 @@ const Dashboard = () => {
         {activePage === 'tasks' && (
           <section className="page-section">
             <h2>My Tasks</h2>
-<p className="page-description">All your tasks in one place. Filter, sort, and check things off.</p>
+            <p className="page-description">All your tasks in one place. Filter, sort, and check things off.</p>
             <div className="filter-sort-controls">
               <div className="filter-group">
                 <label>Risk:</label>
@@ -818,7 +898,7 @@ const Dashboard = () => {
         {activePage === 'calendar' && (
           <section className="page-section">
             <h2>Calendar</h2>
-<p className="page-description">Your deadlines at a glance. Click any task for details.</p>
+            <p className="page-description">Your deadlines at a glance. Click any task for details.</p>
             {tasks.length === 0 ? (
               <div className="empty-state">
                 <p>No tasks yet. Add a task to see it on the calendar.</p>
@@ -863,7 +943,7 @@ const Dashboard = () => {
         {activePage === 'study' && (
           <section className="page-section">
             <h2>Study Plan</h2>
-<p className="page-description">Your personalised study plan. Start with what matters most.</p>
+            <p className="page-description">Your personalised study plan. Start with what matters most.</p>
             {(() => {
               const sortedStudyTasks = getSortedStudyTasks(incompleteTasks);
               if (sortedStudyTasks.length === 0) {
@@ -880,11 +960,8 @@ const Dashboard = () => {
                       {Icons.sparkles}
                       <span className="study-ai-badge">YOUR STUDY PLAN</span>
                     </div>
-                    <p>
-                      Here's a plan sorted by priority. Focus on one task at a time — that's all you need.
-                    </p>
+                    <p>Here's a plan sorted by priority. Focus on one task at a time — that's all you need.</p>
                   </div>
-
                   <div className="study-summary">
                     <div className="study-card">
                       <div className="study-icon blue">{Icons.clock}</div>
@@ -935,8 +1012,6 @@ const Dashboard = () => {
           <section className="page-section">
             <h2>Your Progress</h2>
             <p className="page-description">Every task you complete is progress. Here's how you're tracking.</p>
-
-            {/* Completion Overview Card */}
             <div className="progress-overview-card">
               <div className="progress-overview-left">
                 <div className="completion-ring-wrapper">
@@ -951,9 +1026,7 @@ const Dashboard = () => {
                     <text x="60" y="55" className="completion-ring-value" textAnchor="middle" dominantBaseline="central">
                       {tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0}%
                     </text>
-                    <text x="60" y="72" className="completion-ring-label" textAnchor="middle" dominantBaseline="central">
-                      Complete
-                    </text>
+                    <text x="60" y="72" className="completion-ring-label" textAnchor="middle" dominantBaseline="central">Complete</text>
                   </svg>
                 </div>
                 <div className="progress-overview-info">
@@ -969,108 +1042,42 @@ const Dashboard = () => {
                     }
                   </p>
                   <div className="progress-milestone-badges">
-                    {completedTasks.length >= 1 && (
-                      <span className="milestone-badge achieved">{Icons.checkCircle} First Step</span>
-                    )}
-                    {completedTasks.length >= 3 && (
-                      <span className="milestone-badge achieved">{Icons.target} Building Momentum</span>
-                    )}
-                    {completedTasks.length >= 5 && (
-                      <span className="milestone-badge achieved">{Icons.trendingUp} On a Roll</span>
-                    )}
-                    {completedTasks.length === tasks.length && tasks.length > 0 && (
-                      <span className="milestone-badge achieved gold">{Icons.sparkles} All Clear</span>
-                    )}
-                    {completedTasks.length < 1 && (
-                      <span className="milestone-badge">{Icons.target} Complete your first task</span>
-                    )}
-                    {completedTasks.length >= 1 && completedTasks.length < 3 && (
-                      <span className="milestone-badge">{Icons.target} Complete 3 tasks</span>
-                    )}
-                    {completedTasks.length >= 3 && completedTasks.length < 5 && (
-                      <span className="milestone-badge">{Icons.trendingUp} Complete 5 tasks</span>
-                    )}
+                    {completedTasks.length >= 1 && <span className="milestone-badge achieved">{Icons.checkCircle} First Step</span>}
+                    {completedTasks.length >= 3 && <span className="milestone-badge achieved">{Icons.target} Building Momentum</span>}
+                    {completedTasks.length >= 5 && <span className="milestone-badge achieved">{Icons.trendingUp} On a Roll</span>}
+                    {completedTasks.length === tasks.length && tasks.length > 0 && <span className="milestone-badge achieved gold">{Icons.sparkles} All Clear</span>}
+                    {completedTasks.length < 1 && <span className="milestone-badge">{Icons.target} Complete your first task</span>}
+                    {completedTasks.length >= 1 && completedTasks.length < 3 && <span className="milestone-badge">{Icons.target} Complete 3 tasks</span>}
+                    {completedTasks.length >= 3 && completedTasks.length < 5 && <span className="milestone-badge">{Icons.trendingUp} Complete 5 tasks</span>}
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Stats Grid */}
             <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon blue">{Icons.list}</div>
-                <div className="stat-content">
-                  <span className="stat-value">{stats.totalTasks}</span>
-                  <span className="stat-label">All Tasks</span>
-                </div>
-              </div>
-              <div className="stat-card success">
-                <div className="stat-icon green">{Icons.checkCircle}</div>
-                <div className="stat-content">
-                  <span className="stat-value">{completedTasks.length}</span>
-                  <span className="stat-label">Done</span>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon blue">{Icons.clock}</div>
-                <div className="stat-content">
-                  <span className="stat-value">{activeTasks.length}</span>
-                  <span className="stat-label">Active Tasks</span>
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-icon blue">{Icons.calendar}</div>
-                <div className="stat-content">
-                  <span className="stat-value">{stats.daysUntilNextDeadline !== null ? (stats.daysUntilNextDeadline < 0 ? `Overdue ${Math.abs(stats.daysUntilNextDeadline)}d` : `${stats.daysUntilNextDeadline}d`) : '\u2014'}</span>
-                  <span className="stat-label">Next Due Date</span>
-                </div>
-              </div>
+              <div className="stat-card"><div className="stat-icon blue">{Icons.list}</div><div className="stat-content"><span className="stat-value">{stats.totalTasks}</span><span className="stat-label">All Tasks</span></div></div>
+              <div className="stat-card success"><div className="stat-icon green">{Icons.checkCircle}</div><div className="stat-content"><span className="stat-value">{completedTasks.length}</span><span className="stat-label">Done</span></div></div>
+              <div className="stat-card"><div className="stat-icon blue">{Icons.clock}</div><div className="stat-content"><span className="stat-value">{activeTasks.length}</span><span className="stat-label">Active Tasks</span></div></div>
+              <div className="stat-card"><div className="stat-icon blue">{Icons.calendar}</div><div className="stat-content"><span className="stat-value">{stats.daysUntilNextDeadline !== null ? (stats.daysUntilNextDeadline < 0 ? `Overdue ${Math.abs(stats.daysUntilNextDeadline)}d` : `${stats.daysUntilNextDeadline}d`) : '\u2014'}</span><span className="stat-label">Next Due Date</span></div></div>
             </div>
-
-            {/* Risk Breakdown */}
             {tasks.length > 0 && (
               <div className="risk-breakdown-card">
                 <h3 className="risk-breakdown-title">Risk Breakdown</h3>
                 <div className="risk-breakdown-bars">
                   {(() => {
                     const riskCounts = { High: 0, Medium: 0, Low: 0 };
-                    tasks.filter(t => !t.completed).forEach(t => {
-                      const r = calculateRisk(t.deadline, t.priority, t.hoursPerDay);
-                      riskCounts[r]++;
-                    });
+                    tasks.filter(t => !t.completed).forEach(t => { const r = calculateRisk(t.deadline, t.priority, t.hoursPerDay); riskCounts[r]++; });
                     const total = riskCounts.High + riskCounts.Medium + riskCounts.Low;
                     return total > 0 ? (
                       <>
-                        <div className="risk-bar-row">
-                          <span className="risk-bar-label high">High</span>
-                          <div className="risk-bar-track">
-                            <div className="risk-bar-fill high" style={{ width: `${(riskCounts.High / total) * 100}%` }} />
-                          </div>
-                          <span className="risk-bar-count">{riskCounts.High}</span>
-                        </div>
-                        <div className="risk-bar-row">
-                          <span className="risk-bar-label medium">Medium</span>
-                          <div className="risk-bar-track">
-                            <div className="risk-bar-fill medium" style={{ width: `${(riskCounts.Medium / total) * 100}%` }} />
-                          </div>
-                          <span className="risk-bar-count">{riskCounts.Medium}</span>
-                        </div>
-                        <div className="risk-bar-row">
-                          <span className="risk-bar-label low">Low</span>
-                          <div className="risk-bar-track">
-                            <div className="risk-bar-fill low" style={{ width: `${(riskCounts.Low / total) * 100}%` }} />
-                          </div>
-                          <span className="risk-bar-count">{riskCounts.Low}</span>
-                        </div>
+                        <div className="risk-bar-row"><span className="risk-bar-label high">High</span><div className="risk-bar-track"><div className="risk-bar-fill high" style={{ width: `${(riskCounts.High / total) * 100}%` }} /></div><span className="risk-bar-count">{riskCounts.High}</span></div>
+                        <div className="risk-bar-row"><span className="risk-bar-label medium">Medium</span><div className="risk-bar-track"><div className="risk-bar-fill medium" style={{ width: `${(riskCounts.Medium / total) * 100}%` }} /></div><span className="risk-bar-count">{riskCounts.Medium}</span></div>
+                        <div className="risk-bar-row"><span className="risk-bar-label low">Low</span><div className="risk-bar-track"><div className="risk-bar-fill low" style={{ width: `${(riskCounts.Low / total) * 100}%` }} /></div><span className="risk-bar-count">{riskCounts.Low}</span></div>
                       </>
-                    ) : (
-                      <p className="risk-breakdown-empty">All tasks completed — no active risks!</p>
-                    );
+                    ) : <p className="risk-breakdown-empty">All tasks completed — no active risks!</p>;
                   })()}
                 </div>
               </div>
             )}
-
           </section>
         )}
 
@@ -1078,47 +1085,25 @@ const Dashboard = () => {
         {activePage === 'settings' && (
           <section className="page-section">
             <h2>Settings</h2>
-<p className="page-description">Personalize your experience.</p>
-            {/* Profile Card */}
+            <p className="page-description">Personalize your experience.</p>
             <div className="settings-profile-card">
-              <div className="settings-profile-avatar">
-                {user?.name?.charAt(0).toUpperCase() || 'S'}
-              </div>
+              <div className="settings-profile-avatar">{user?.name?.charAt(0).toUpperCase() || 'S'}</div>
               <div className="settings-profile-info">
                 <h3>{user?.name || 'Student'}</h3>
                 <p>{user?.email || 'student@example.com'}</p>
               </div>
               <span className="settings-profile-badge">Student Plan</span>
             </div>
-
             <div className="settings-list">
               <div className="settings-item">
-                <div className="settings-info">
-                  <div className="settings-icon-wrapper blue">{Icons.palette}</div>
-                  <div>
-                    <h3>Theme</h3>
-                    <p>Choose your preferred color scheme</p>
-                  </div>
-                </div>
+                <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.palette}</div><div><h3>Theme</h3><p>Choose your preferred color scheme</p></div></div>
                 <ThemeToggle />
               </div>
               <div className="settings-item">
-                <div className="settings-info">
-                  <div className="settings-icon-wrapper blue">{Icons.user}</div>
-                  <div>
-                    <h3>Account</h3>
-                    <p>{user?.email || 'student@example.com'}</p>
-                  </div>
-                </div>
+                <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.user}</div><div><h3>Account</h3><p>{user?.email || 'student@example.com'}</p></div></div>
               </div>
               <div className="settings-item">
-                <div className="settings-info">
-                  <div className="settings-icon-wrapper blue">{Icons.info}</div>
-                  <div>
-                    <h3>App Version</h3>
-                    <p>AssignTify v1.0.0</p>
-                  </div>
-                </div>
+                <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.info}</div><div><h3>App Version</h3><p>AssignTify v1.0.0</p></div></div>
               </div>
             </div>
           </section>

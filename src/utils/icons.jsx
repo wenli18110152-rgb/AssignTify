@@ -232,6 +232,69 @@ export const Icons = {
       <line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
   ),
+  scale: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18"/>
+      <path d="M5 7l7-4 7 4"/>
+      <circle cx="5" cy="11" r="3"/>
+      <circle cx="19" cy="11" r="3"/>
+    </svg>
+  ),
+  activity: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  barChart: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="12" width="4" height="9" rx="1"/>
+      <rect x="10" y="3" width="4" height="18" rx="1"/>
+      <rect x="17" y="8" width="4" height="13" rx="1"/>
+    </svg>
+  ),
+  flag: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+      <line x1="4" y1="22" x2="4" y2="15"/>
+    </svg>
+  ),
+  coach: (
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Graduation cap */}
+      <path d="M24 6L4 17L24 28L44 17L24 6Z" fill="url(#coachCap)" />
+      <path d="M24 6L4 17L24 28L44 17L24 6Z" fillOpacity="0.9" />
+      {/* Cap tassel */}
+      <line x1="38" y1="14" x2="38" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+      <circle cx="38" cy="26" r="2.5" fill="currentColor" opacity="0.6" />
+      {/* Head */}
+      <circle cx="24" cy="24" r="8" fill="url(#coachHead)" />
+      {/* Eyes */}
+      <circle cx="21" cy="23" r="1.2" fill="#1E293B" />
+      <circle cx="27" cy="23" r="1.2" fill="#1E293B" />
+      {/* Smile */}
+      <path d="M21.5 27 Q24 29.5 26.5 27" stroke="#1E293B" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      {/* Body / Shoulders */}
+      <path d="M12 42C12 34 17.5 30 24 30C30.5 30 36 34 36 42" fill="url(#coachBody)" />
+      {/* Collar / V-neck detail */}
+      <path d="M21 32L24 36L27 32" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+      {/* Sparkle accent (mentor/insight symbol) */}
+      <path d="M38 8L39 10L41 10.5L39 11.5L38.5 13.5L37.5 11.5L35.5 11L37.5 10L38 8Z" fill="currentColor" opacity="0.5" />
+      <defs>
+        <linearGradient id="coachCap" x1="4" y1="6" x2="44" y2="28" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#3B82F6" />
+          <stop offset="1" stopColor="#1D4ED8" />
+        </linearGradient>
+        <linearGradient id="coachHead" x1="16" y1="16" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#E0E7FF" />
+          <stop offset="1" stopColor="#CBD5E1" />
+        </linearGradient>
+        <linearGradient id="coachBody" x1="12" y1="30" x2="36" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#3B82F6" />
+          <stop offset="1" stopColor="#1E40AF" />
+        </linearGradient>
+      </defs>
+    </svg>
+  ),
 };
 
 export default Icons;

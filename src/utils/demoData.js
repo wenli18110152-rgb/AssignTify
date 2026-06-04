@@ -1,51 +1,60 @@
 // Demo data generator for AssignTify — realistic university tasks
-export const generateDemoTasks = (addTask) => {
-  const now = new Date();
 
-  const makeDeadline = (daysFromNow, hour = 23, minute = 59) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + daysFromNow);
-    d.setHours(hour, minute, 0, 0);
-    return d.toISOString().slice(0, 16);
-  };
+const makeDeadline = (daysFromNow, hour = 23, minute = 59) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString().slice(0, 16);
+};
 
-  const demoTasks = [
+// Returns an array of demo task objects with generated IDs (no side effects)
+export const getDemoTaskData = () => {
+  const now = Date.now();
+  return [
     {
-      name: 'BUS4012 Assignment 3',
-      description: 'Analyse the financial performance of two competing firms using ratio analysis and write a 2,500-word comparative report.',
+      id: `demo_${now}_1`,
+      name: 'Research Essay',
+      description: 'Write a 2,000-word research essay on the chosen topic, including peer-reviewed sources and proper referencing.',
       deadline: makeDeadline(3),
       priority: 'High',
-      hoursPerDay: 3
+      hoursPerDay: 3,
+      createdAt: new Date().toISOString(),
+      completed: false
     },
     {
-      name: 'Business Analytics Report',
-      description: 'Complete the data visualisation dashboard using Tableau and write the methodology section of the report.',
+      id: `demo_${now}_2`,
+      name: 'Group Presentation',
+      description: 'Prepare and rehearse a 15-minute group presentation covering the assigned topic with visual aids and speaker notes.',
+      deadline: makeDeadline(5),
+      priority: 'Medium',
+      hoursPerDay: 2,
+      createdAt: new Date().toISOString(),
+      completed: false
+    },
+    {
+      id: `demo_${now}_3`,
+      name: 'Statistics Quiz',
+      description: 'Revise probability, hypothesis testing, and regression concepts for the upcoming online quiz.',
       deadline: makeDeadline(7),
       priority: 'Medium',
-      hoursPerDay: 2
+      hoursPerDay: 2,
+      createdAt: new Date().toISOString(),
+      completed: false
     },
     {
-      name: 'Cybersecurity Presentation',
-      description: 'Prepare a 15-minute presentation on recent ransomware attack vectors and mitigation strategies for enterprise systems.',
-      deadline: makeDeadline(5),
-      priority: 'High',
-      hoursPerDay: 2
-    },
-    {
-      name: 'Marketing Case Study',
-      description: 'Analyse the market entry strategy of a chosen brand into the Australian market. Include PESTLE and SWOT analysis.',
-      deadline: makeDeadline(10),
-      priority: 'Medium',
-      hoursPerDay: 2
-    },
-    {
-      name: 'Exam Revision Session',
-      description: 'Review lecture notes and practice past exam papers for the upcoming final exam covering weeks 6-12 content.',
+      id: `demo_${now}_4`,
+      name: 'Final Exam Revision',
+      description: 'Review lecture notes and practice past exam papers for the final exam covering all semester content.',
       deadline: makeDeadline(14),
       priority: 'Low',
-      hoursPerDay: 1
+      hoursPerDay: 1,
+      createdAt: new Date().toISOString(),
+      completed: false
     }
   ];
+};
 
-  demoTasks.forEach(task => addTask(task));
+// Legacy helper — adds demo tasks directly via addTask (used as fallback)
+export const generateDemoTasks = (addTask) => {
+  getDemoTaskData().forEach(task => addTask(task));
 };
