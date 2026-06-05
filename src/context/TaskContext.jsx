@@ -3,10 +3,30 @@ import { calculateRisk } from '../utils/riskCalculator';
 import { calculateWorkload } from '../utils/workload';
 import { useAuth } from './AuthContext';
 import { getDemoTaskData } from '../utils/demoData';
+import { supabase } from '../lib/supabaseClient';
 
 const TaskContext = createContext(null);
 
-const API_BASE = '/api';
+// Convert a Supabase row (snake_case) to frontend format (camelCase)
+const mapFromSupabase = (row) => ({
+  ...row,
+  hoursPerDay: row.hours_per_day,
+  createdAt: row.created_at,
+});
+
+// Convert frontend task data (camelCase) to Supabase row format (snake_case)
+const mapToSupabase = (data) => {
+  const row = { ...data };
+  if (row.hoursPerDay !== undefined) {
+    row.hours_per_day = row.hoursPerDay;
+    delete row.hoursPerDay;
+  }
+  if (row.createdAt !== undefined) {
+    row.created_at = row.createdAt;
+    delete row.createdAt;
+  }
+  return row;
+};
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
@@ -15,15 +35,19 @@ export const TaskProvider = ({ children }) => {
   const [demoTasks, setDemoTasks] = useState([]);
   const { user } = useAuth();
 
-  // Load tasks from Supabase via API when user changes
+  // Load tasks directly from Supabase when user changes
   useEffect(() => {
     const loadTasks = async () => {
       if (user?.email) {
         try {
-          const response = await fetch(`${API_BASE}/tasks/${encodeURIComponent(user.email)}`);
-          if (!response.ok) throw new Error('Failed to load tasks');
-          const data = await response.json();
-          setTasks(data.tasks || []);
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('user_email', user.email)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+          setTasks((data || []).map(mapFromSupabase));
         } catch (error) {
           console.error('Error loading tasks:', error);
           // Fall back to empty list — don't crash the app
@@ -71,10 +95,9 @@ export const TaskProvider = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({
           id: newTask.id,
           user_email: user.email,
           name: newTask.name,
@@ -85,10 +108,11 @@ export const TaskProvider = ({ children }) => {
           created_at: newTask.createdAt,
           completed: newTask.completed
         })
-      });
-      if (!response.ok) throw new Error('Failed to create task');
-      const data = await response.json();
-      const savedTask = data.task;
+        .select()
+        .single();
+
+      if (error) throw error;
+      const savedTask = mapFromSupabase(data);
       setTasks(prev => [savedTask, ...prev]);
       return savedTask;
     } catch (error) {
@@ -115,7 +139,7 @@ export const TaskProvider = ({ children }) => {
     ));
 
     try {
-      // Map frontend camelCase → backend snake_case
+      // Map frontend camelCase → Supabase snake_case
       const body = {};
       if (updates.name !== undefined) body.name = updates.name;
       if (updates.description !== undefined) body.description = updates.description;
@@ -124,12 +148,12 @@ export const TaskProvider = ({ children }) => {
       if (updates.hoursPerDay !== undefined) body.hours_per_day = updates.hoursPerDay;
       if (updates.completed !== undefined) body.completed = updates.completed;
 
-      const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!response.ok) throw new Error('Failed to update task');
+      const { error } = await supabase
+        .from('tasks')
+        .update(body)
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating task:', error);
       // Revert optimistic update on failure
@@ -156,10 +180,12 @@ export const TaskProvider = ({ children }) => {
     setTasks(prev => prev.filter(task => task.id !== taskId));
 
     try {
-      const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) throw new Error('Failed to delete task');
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting task:', error);
       // Revert optimistic delete on failure
@@ -188,10 +214,12 @@ export const TaskProvider = ({ children }) => {
     ));
 
     try {
-      const response = await fetch(`${API_BASE}/tasks/${taskId}/toggle`, {
-        method: 'PATCH'
-      });
-      if (!response.ok) throw new Error('Failed to toggle task');
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed: !previousTask.completed })
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error toggling task:', error);
       // Revert optimistic toggle on failure
