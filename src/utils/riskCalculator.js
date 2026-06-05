@@ -242,8 +242,8 @@ export const calculateAcademicHealth = (tasks) => {
     return days >= 0 && days <= 2;
   }).length;
 
-  // Weekly hours estimate
-  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
+  // Weekly hours estimate (hoursPerDay is total weekly per task, not daily)
+  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1), 0);
 
   let score = 100;
   const breakdown = { base: 100, overduePenalty: 0, completionBonus: 0, urgentPenalty: 0, weeklyPenalty: 0, rateBonus: 0 };
@@ -267,10 +267,10 @@ export const calculateAcademicHealth = (tasks) => {
   score -= urgentPenalty;
   breakdown.urgentPenalty = -urgentPenalty;
 
-  // Workload balance penalty
+  // Workload balance penalty (new thresholds: >40 Heavy, >30 Busy, >15 Moderate)
   let weeklyPenalty = 0;
-  if (weeklyHours > 30) weeklyPenalty = 10;
-  else if (weeklyHours > 20) weeklyPenalty = 5;
+  if (weeklyHours > 40) weeklyPenalty = 10;
+  else if (weeklyHours > 30) weeklyPenalty = 5;
   score -= weeklyPenalty;
   breakdown.weeklyPenalty = -weeklyPenalty;
 
@@ -329,7 +329,8 @@ export const getWorkloadSummary = (tasks) => {
 
   const now = new Date();
   const incompleteTasks = tasks.filter(t => !t.completed);
-  const totalWeeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
+  // hoursPerDay is total weekly per task — no multiplication needed
+  const totalWeeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1), 0);
 
   // Find busiest day in next 7
   let busiestDay = null;
@@ -351,9 +352,10 @@ export const getWorkloadSummary = (tasks) => {
     }
   }
 
-  let load = 'Balanced';
-  if (totalWeeklyHours > 30) load = 'Heavy';
-  else if (totalWeeklyHours > 20) load = 'Busy';
+  let load = 'Light';
+  if (totalWeeklyHours > 40) load = 'Heavy';
+  else if (totalWeeklyHours > 30) load = 'Busy';
+  else if (totalWeeklyHours > 15) load = 'Moderate';
 
   return {
     totalWeeklyHours: Math.round(totalWeeklyHours * 10) / 10,
@@ -463,22 +465,17 @@ export const getWeeklyInsights = (tasks) => {
     return { busiestDay: null, quietestDay: null, peakHours: 0, avgDailyHours: 0, totalWeekHours: 0, recommendation: 'All tasks completed — enjoy your free time!' };
   }
 
-  // Calculate hours for each day of the week
+  // hoursPerDay is total weekly per task; sum gives total weekly hours.
+  // Distribute evenly across 7 days for the daily chart.
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const totalWeeklyRaw = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1), 0);
+  const dailyStudyHours = Math.round((totalWeeklyRaw / 7) * 10) / 10;
   const dailyHours = [];
 
   for (let i = 0; i < 7; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() + i);
-    let hours = 0;
-    incompleteTasks.forEach(task => {
-      const deadline = new Date(task.deadline);
-      const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
-      if (daysUntil >= 0 && daysUntil <= 7) {
-        hours += task.hoursPerDay || 1;
-      }
-    });
-    dailyHours.push({ day: dayNames[date.getDay()], dayIndex: i, hours: Math.round(hours * 10) / 10 });
+    dailyHours.push({ day: dayNames[date.getDay()], dayIndex: i, hours: Math.round(dailyStudyHours * 10) / 10 });
   }
 
   // Find busiest and quietest days

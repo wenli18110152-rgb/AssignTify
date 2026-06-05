@@ -1,39 +1,72 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Helper: extract a safe user object from Supabase session
+  // Email is always normalized to lowercase for consistent lookups.
+  const buildUser = (session) => {
+    if (!session?.user) return null;
+    const email = session.user.email.toLowerCase();
+    return {
+      id: session.user.id,
+      email,
+      name: email.split('@')[0]
+    };
+  };
+
+  // On mount: restore session and listen for auth state changes
   useEffect(() => {
-    const savedUser = localStorage.getItem('assigntify_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
-    }
+    // Get the current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const userData = buildUser(session);
+      if (userData) {
+        setUser(userData);
+        setIsAuthenticated(true);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const userData = buildUser(session);
+        setUser(userData);
+        setIsAuthenticated(!!userData);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Login function
-  const login = (email, password) => {
-    // Simple validation - in real app this would be API call
-    const users = JSON.parse(localStorage.getItem('assigntify_users') || '[]');
-    const existingUser = users.find(u => u.email === email && u.password === password);
-    
-    if (existingUser) {
-      const userData = { email: existingUser.email, name: existingUser.name || email.split('@')[0] };
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('assigntify_user', JSON.stringify(userData));
+  const login = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
       return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Login failed' };
     }
-    return { success: false, error: 'Invalid email or password' };
   };
 
   // Register function
-  const register = (email, password, confirmPassword) => {
-    // Validation
+  const register = async (email, password, confirmPassword) => {
+    // Client-side validation
     if (!email || !password) {
       return { success: false, error: 'Please fill in all fields' };
     }
@@ -47,35 +80,40 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: 'Please enter a valid email' };
     }
 
-    // Check if user exists
-    const users = JSON.parse(localStorage.getItem('assigntify_users') || '[]');
-    if (users.find(u => u.email === email)) {
-      return { success: false, error: 'Email already registered' };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.toLowerCase(),
+        password
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // If Supabase returns a session, user is auto-logged in
+      // If email confirmation is enabled, session will be null and user must confirm
+      if (data.session) {
+        return { success: true };
+      }
+
+      return {
+        success: true,
+        message: 'Registration successful. Please check your email to confirm your account.'
+      };
+    } catch (err) {
+      return { success: false, error: err.message || 'Registration failed' };
     }
-
-    // Save new user
-    const newUser = { email, password, name: email.split('@')[0] };
-    users.push(newUser);
-    localStorage.setItem('assigntify_users', JSON.stringify(users));
-
-    // Auto login after registration
-    const userData = { email: newUser.email, name: newUser.name };
-    setUser(userData);
-    setIsAuthenticated(true);
-    localStorage.setItem('assigntify_user', JSON.stringify(userData));
-
-    return { success: true };
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('assigntify_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

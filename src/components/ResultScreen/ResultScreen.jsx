@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
 import { calculateRisk, getDaysUntilDeadline, getRiskColor } from '../../utils/riskCalculator';
@@ -9,6 +10,7 @@ const ResultScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addTask, clearCurrentTask } = useTasks();
+  const [saving, setSaving] = useState(false);
   
   const { taskData, hoursPerDay } = location.state || {};
 
@@ -29,10 +31,18 @@ const ResultScreen = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSaveTask = () => {
-    addTask({ ...taskData, hoursPerDay });
-    clearCurrentTask();
-    navigate('/dashboard');
+  const handleSaveTask = async () => {
+    setSaving(true);
+    try {
+      await addTask({ ...taskData, hoursPerDay });
+      clearCurrentTask();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Failed to save task:', error);
+      alert('Failed to save your task. Please check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleStartOver = () => {
@@ -106,8 +116,8 @@ const ResultScreen = () => {
 
           {/* Action Buttons */}
           <div className="result-actions">
-            <button className="save-btn" onClick={handleSaveTask}>
-              Save to Dashboard
+            <button className="save-btn" onClick={handleSaveTask} disabled={saving}>
+              {saving ? 'Saving...' : 'Save to Dashboard'}
             </button>
             <button className="restart-btn" onClick={handleStartOver}>
               Start Over

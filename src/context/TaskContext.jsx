@@ -1,12 +1,12 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { calculateRisk } from '../utils/riskCalculator';
+import { calculateWorkload } from '../utils/workload';
 import { useAuth } from './AuthContext';
 import { getDemoTaskData } from '../utils/demoData';
 
 const TaskContext = createContext(null);
 
-// Helper function to get user-specific storage key
-const getStorageKey = (userEmail) => `assigntify_tasks_${userEmail}`;
+const API_BASE = '/api';
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
@@ -15,25 +15,29 @@ export const TaskProvider = ({ children }) => {
   const [demoTasks, setDemoTasks] = useState([]);
   const { user } = useAuth();
 
-  // Load tasks from localStorage when user changes
+  // Load tasks from Supabase via API when user changes
   useEffect(() => {
-    if (user?.email) {
-      const savedTasks = localStorage.getItem(getStorageKey(user.email));
-      setTasks(savedTasks ? JSON.parse(savedTasks) : []);
-    } else {
-      setTasks([]);
-    }
-    // Always exit demo mode on user change / refresh
-    setDemoMode(false);
-    setDemoTasks([]);
+    const loadTasks = async () => {
+      if (user?.email) {
+        try {
+          const response = await fetch(`${API_BASE}/tasks/${encodeURIComponent(user.email)}`);
+          if (!response.ok) throw new Error('Failed to load tasks');
+          const data = await response.json();
+          setTasks(data.tasks || []);
+        } catch (error) {
+          console.error('Error loading tasks:', error);
+          // Fall back to empty list — don't crash the app
+          setTasks([]);
+        }
+      } else {
+        setTasks([]);
+      }
+      // Always exit demo mode on user change / refresh
+      setDemoMode(false);
+      setDemoTasks([]);
+    };
+    loadTasks();
   }, [user?.email]);
-
-  // Save tasks to localStorage whenever they change (skip during demo mode)
-  useEffect(() => {
-    if (user?.email && !demoMode) {
-      localStorage.setItem(getStorageKey(user.email), JSON.stringify(tasks));
-    }
-  }, [tasks, user?.email, demoMode]);
 
   // The effective task list — demo tasks when demo mode is active, real tasks otherwise
   const effectiveTasks = demoMode ? demoTasks : tasks;
@@ -53,54 +57,152 @@ export const TaskProvider = ({ children }) => {
   const isDemoMode = demoMode;
 
   // Add a new task
-  const addTask = (taskData) => {
+  const addTask = useCallback(async (taskData) => {
     const newTask = {
       id: Date.now().toString(),
       ...taskData,
       createdAt: new Date().toISOString(),
       completed: false
     };
+
     if (demoMode) {
       setDemoTasks(prev => [...prev, newTask]);
-    } else {
-      setTasks(prev => [...prev, newTask]);
+      return newTask;
     }
-    return newTask;
-  };
+
+    try {
+      const response = await fetch(`${API_BASE}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newTask.id,
+          user_email: user.email,
+          name: newTask.name,
+          description: newTask.description || '',
+          deadline: newTask.deadline,
+          priority: newTask.priority || 'Medium',
+          hours_per_day: newTask.hoursPerDay || 1,
+          created_at: newTask.createdAt,
+          completed: newTask.completed
+        })
+      });
+      if (!response.ok) throw new Error('Failed to create task');
+      const data = await response.json();
+      const savedTask = data.task;
+      setTasks(prev => [savedTask, ...prev]);
+      return savedTask;
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
+  }, [demoMode, user?.email]);
 
   // Update a task
-  const updateTask = (taskId, updates) => {
-    const updater = prev => prev.map(task =>
-      task.id === taskId ? { ...task, ...updates } : task
-    );
+  const updateTask = useCallback(async (taskId, updates) => {
     if (demoMode) {
-      setDemoTasks(updater);
-    } else {
-      setTasks(updater);
+      setDemoTasks(prev => prev.map(task =>
+        task.id === taskId ? { ...task, ...updates } : task
+      ));
+      return;
     }
-  };
+
+    // Capture previous task for rollback
+    const previousTask = tasks.find(t => t.id === taskId);
+
+    // Optimistic update
+    setTasks(prev => prev.map(task =>
+      task.id === taskId ? { ...task, ...updates } : task
+    ));
+
+    try {
+      // Map frontend camelCase → backend snake_case
+      const body = {};
+      if (updates.name !== undefined) body.name = updates.name;
+      if (updates.description !== undefined) body.description = updates.description;
+      if (updates.deadline !== undefined) body.deadline = updates.deadline;
+      if (updates.priority !== undefined) body.priority = updates.priority;
+      if (updates.hoursPerDay !== undefined) body.hours_per_day = updates.hoursPerDay;
+      if (updates.completed !== undefined) body.completed = updates.completed;
+
+      const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!response.ok) throw new Error('Failed to update task');
+    } catch (error) {
+      console.error('Error updating task:', error);
+      // Revert optimistic update on failure
+      if (previousTask) {
+        setTasks(prev => prev.map(task =>
+          task.id === taskId ? previousTask : task
+        ));
+      }
+      throw error;
+    }
+  }, [demoMode, tasks]);
 
   // Delete a task
-  const deleteTask = (taskId) => {
-    const updater = prev => prev.filter(task => task.id !== taskId);
+  const deleteTask = useCallback(async (taskId) => {
     if (demoMode) {
-      setDemoTasks(updater);
-    } else {
-      setTasks(updater);
+      setDemoTasks(prev => prev.filter(task => task.id !== taskId));
+      return;
     }
-  };
+
+    // Capture the task before deleting for rollback
+    const deletedTask = tasks.find(t => t.id === taskId);
+
+    // Optimistic delete
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+
+    try {
+      const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete task');
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      // Revert optimistic delete on failure
+      if (deletedTask) {
+        setTasks(prev => [deletedTask, ...prev]);
+      }
+      throw error;
+    }
+  }, [demoMode, tasks]);
 
   // Toggle task completion
-  const toggleComplete = (taskId) => {
-    const updater = prev => prev.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
+  const toggleComplete = useCallback(async (taskId) => {
     if (demoMode) {
-      setDemoTasks(updater);
-    } else {
-      setTasks(updater);
+      setDemoTasks(prev => prev.map(task =>
+        task.id === taskId ? { ...task, completed: !task.completed } : task
+      ));
+      return;
     }
-  };
+
+    // Capture previous state for rollback
+    const previousTask = tasks.find(t => t.id === taskId);
+
+    // Optimistic toggle
+    setTasks(prev => prev.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
+
+    try {
+      const response = await fetch(`${API_BASE}/tasks/${taskId}/toggle`, {
+        method: 'PATCH'
+      });
+      if (!response.ok) throw new Error('Failed to toggle task');
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      // Revert optimistic toggle on failure
+      if (previousTask) {
+        setTasks(prev => prev.map(task =>
+          task.id === taskId ? previousTask : task
+        ));
+      }
+      throw error;
+    }
+  }, [demoMode, tasks]);
 
   // Get task by ID
   const getTaskById = (taskId) => {
@@ -164,6 +266,100 @@ export const TaskProvider = ({ children }) => {
     };
   };
 
+  // Unified workload calculation — single source of truth for all pages
+  // hoursPerDay represents estimated total weekly study hours per task (not daily recurring).
+  const getUnifiedWorkload = () => {
+    const base = calculateWorkload(effectiveTasks);
+
+    // Find busiest day in next 7 (tasks with nearest deadlines)
+    const incompleteTasks = effectiveTasks.filter(t => !t.completed);
+    const now = new Date();
+    let busiestDay = null;
+    let busiestDayHours = 0;
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() + i);
+      let dayHours = 0;
+      incompleteTasks.forEach(task => {
+        const deadline = new Date(task.deadline);
+        const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
+        if (daysUntil >= 0 && daysUntil <= 3) {
+          dayHours += task.hoursPerDay || 1;
+        }
+      });
+      if (dayHours > busiestDayHours) {
+        busiestDayHours = dayHours;
+        busiestDay = date.toLocaleDateString('en-US', { weekday: 'long' });
+      }
+    }
+
+    return {
+      ...base,
+      busiestDay,
+      busiestDayHours: Math.round(busiestDayHours * 10) / 10
+    };
+  };
+
+  // Centralized progress statistics — single source of truth for Progress page
+  const getProgressStats = () => {
+    const now = new Date();
+    const totalCount = effectiveTasks.length;
+    const completedTasks = effectiveTasks.filter(t => t.completed);
+    const completedCount = completedTasks.length;
+    const incompleteTasks = effectiveTasks.filter(t => !t.completed);
+    const activeCount = incompleteTasks.length;
+    const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    // Upcoming deadline (nearest incomplete task)
+    let upcomingDeadline = null;
+    if (incompleteTasks.length > 0) {
+      const sorted = [...incompleteTasks].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      const nearest = sorted[0];
+      const daysLeft = Math.ceil((new Date(nearest.deadline) - now) / (1000 * 60 * 60 * 24));
+      upcomingDeadline = { task: nearest, daysLeft };
+    }
+
+    // Weekly productivity: tasks completed this week
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const weeklyProductivity = completedTasks.filter(t => {
+      // Use createdAt as a proxy for when it was completed if no completedAt field
+      return true; // Count all completed tasks as productivity since we can't track completion date
+    }).length;
+
+    // Recent completed tasks (last 5, sorted by deadline descending)
+    const recentCompleted = [...completedTasks]
+      .sort((a, b) => new Date(b.deadline) - new Date(a.deadline))
+      .slice(0, 5);
+
+    // Risk breakdown for active tasks
+    const riskCounts = { High: 0, Medium: 0, Low: 0 };
+    incompleteTasks.forEach(t => {
+      const risk = calculateRisk(t.deadline, t.priority, t.hoursPerDay);
+      riskCounts[risk]++;
+    });
+
+    // Priority breakdown for active tasks
+    const priorityCounts = { High: 0, Medium: 0, Low: 0 };
+    incompleteTasks.forEach(t => {
+      const p = t.priority || 'Medium';
+      priorityCounts[p]++;
+    });
+
+    return {
+      completionPercent,
+      completedCount,
+      totalCount,
+      activeCount,
+      upcomingDeadline,
+      weeklyProductivity,
+      recentCompleted,
+      riskBreakdown: riskCounts,
+      priorityBreakdown: priorityCounts
+    };
+  };
+
   // Set current task for creation flow
   const setCurrentTaskForFlow = (taskData) => {
     setCurrentTask(taskData);
@@ -187,6 +383,8 @@ export const TaskProvider = ({ children }) => {
       getHighRiskTasks,
       getTodaysFocus,
       getSummaryStats,
+      getUnifiedWorkload,
+      getProgressStats,
       setCurrentTaskForFlow,
       clearCurrentTask,
       enterDemoMode,

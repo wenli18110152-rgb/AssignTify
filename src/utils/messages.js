@@ -314,7 +314,8 @@ export const generateReminders = (tasks) => {
       taskName: task.name,
       daysLeft,
       category,
-      message
+      message,
+      priority: task.priority || 'Medium'
     });
   });
 
@@ -412,9 +413,9 @@ export const getStudentInsights = (tasks) => {
     });
   }
 
-  // Workload awareness
-  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1) * 5, 0);
-  if (weeklyHours > 25 && incompleteTasks.length > 0) {
+  // Workload awareness (hoursPerDay is total weekly per task)
+  const weeklyHours = incompleteTasks.reduce((sum, t) => sum + (t.hoursPerDay || 1), 0);
+  if (weeklyHours > 20 && incompleteTasks.length > 0) {
     insights.push({
       icon: 'clock',
       text: `Your estimated weekly study load is ${Math.round(weeklyHours)} hours — consider spreading tasks across more days.`,

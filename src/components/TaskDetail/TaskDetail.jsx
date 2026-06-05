@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
 import { calculateRisk, getDaysUntilDeadline, getRiskColor, calculateRiskScore, getRiskLevel, getRiskLevelColor } from '../../utils/riskCalculator';
@@ -9,6 +10,7 @@ const TaskDetail = () => {
   const navigate = useNavigate();
   const { taskId } = useParams();
   const { getTaskById, toggleComplete, deleteTask } = useTasks();
+  const [toggling, setToggling] = useState(false);
   
   const task = getTaskById(taskId);
 
@@ -40,10 +42,25 @@ const TaskDetail = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleDelete = () => {
+  const handleToggleComplete = async () => {
+    setToggling(true);
+    try {
+      await toggleComplete(task.id);
+    } catch (error) {
+      alert('Failed to update task status. Please try again.');
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteTask(task.id);
-      navigate('/dashboard');
+      try {
+        await deleteTask(task.id);
+        navigate('/dashboard');
+      } catch (error) {
+        alert('Failed to delete task. Please try again.');
+      }
     }
   };
 
@@ -60,8 +77,8 @@ const TaskDetail = () => {
               <button className="edit-btn-header" onClick={() => navigate(`/edit-task/${task.id}`)}>
                 {Icons.edit} Edit
               </button>
-              <button className={`complete-btn-header ${task.completed ? 'completed' : ''}`} onClick={() => toggleComplete(task.id)}>
-                {task.completed ? 'Completed' : 'Mark Complete'}
+              <button className={`complete-btn-header ${task.completed ? 'completed' : ''}`} onClick={handleToggleComplete} disabled={toggling}>
+                {toggling ? 'Updating...' : task.completed ? 'Completed' : 'Mark Complete'}
               </button>
               <button className="delete-btn-header" onClick={handleDelete}>
                 {Icons.trash} Delete
