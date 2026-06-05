@@ -266,12 +266,12 @@ const Dashboard = () => {
   };
 
   const navItems = [
-    { id: 'dashboard', icon: Icons.home, label: 'Dashboard' },
-    { id: 'tasks', icon: Icons.list, label: 'My Tasks' },
-    { id: 'calendar', icon: Icons.calendar, label: 'Calendar' },
-    { id: 'study', icon: Icons.book, label: 'Study Plan' },
-    { id: 'stats', icon: Icons.chart, label: 'Progress' },
-    { id: 'settings', icon: Icons.gear, label: 'Settings' },
+    { id: 'dashboard', icon: Icons.home, label: '🏠 Dashboard' },
+    { id: 'tasks', icon: Icons.list, label: '📝 My Tasks' },
+    { id: 'calendar', icon: Icons.calendar, label: '📅 Calendar' },
+    { id: 'study', icon: Icons.book, label: '📚 Study Plan' },
+    { id: 'stats', icon: Icons.chart, label: '📊 Progress' },
+    { id: 'settings', icon: Icons.gear, label: '⚙️ Settings' },
   ];
 
   const renderRiskBadge = (risk, size = 'sm') => (
@@ -1623,7 +1623,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${tasks.length >= 1 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.rocket}</div>
                   <div className="achievement-info">
-                    <h4>First Task</h4>
+                    <h4>🚀 First Task</h4>
                     <p>Create your first task</p>
                   </div>
                   <span className="achievement-status">{tasks.length >= 1 ? Icons.checkCircle : Icons.lock}</span>
@@ -1631,7 +1631,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${progressStats.completedCount >= 1 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.checkCircle}</div>
                   <div className="achievement-info">
-                    <h4>First Completion</h4>
+                    <h4>✅ First Completion</h4>
                     <p>Complete your first task</p>
                   </div>
                   <span className="achievement-status">{progressStats.completedCount >= 1 ? Icons.checkCircle : Icons.lock}</span>
@@ -1639,7 +1639,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${progressStats.completedCount >= 3 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.zap}</div>
                   <div className="achievement-info">
-                    <h4>Study Streak</h4>
+                    <h4>🔥 Study Streak</h4>
                     <p>Complete 3 tasks</p>
                   </div>
                   <span className="achievement-status">{progressStats.completedCount >= 3 ? Icons.checkCircle : Icons.lock}</span>
@@ -1647,7 +1647,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${progressStats.totalCount > 0 && progressStats.completedCount >= progressStats.totalCount / 2 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.target}</div>
                   <div className="achievement-info">
-                    <h4>Halfway There</h4>
+                    <h4>🎯 Halfway There</h4>
                     <p>Complete 50% of tasks</p>
                   </div>
                   <span className="achievement-status">{progressStats.totalCount > 0 && progressStats.completedCount >= progressStats.totalCount / 2 ? Icons.checkCircle : Icons.lock}</span>
@@ -1655,7 +1655,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${progressStats.completedCount >= 5 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.trendingUp}</div>
                   <div className="achievement-info">
-                    <h4>Productivity Pro</h4>
+                    <h4>🌟 Productivity Pro</h4>
                     <p>Complete 5 tasks</p>
                   </div>
                   <span className="achievement-status">{progressStats.completedCount >= 5 ? Icons.checkCircle : Icons.lock}</span>
@@ -1663,7 +1663,7 @@ const Dashboard = () => {
                 <div className={`achievement-card ${progressStats.completedCount === progressStats.totalCount && progressStats.totalCount > 0 ? 'unlocked' : 'locked'}`}>
                   <div className="achievement-icon-area">{Icons.sparkles}</div>
                   <div className="achievement-info">
-                    <h4>All Clear</h4>
+                    <h4>🧹 All Clear</h4>
                     <p>Complete every task</p>
                   </div>
                   <span className="achievement-status">{progressStats.completedCount === progressStats.totalCount && progressStats.totalCount > 0 ? Icons.checkCircle : Icons.lock}</span>
