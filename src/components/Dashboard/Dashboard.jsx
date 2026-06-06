@@ -11,7 +11,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile, updatePassword } = useAuth();
   const { 
     tasks, 
     addTask,
@@ -36,6 +36,13 @@ const Dashboard = () => {
   const [completionToast, setCompletionToast] = useState(null);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
+
+  // Profile management state
+  const [displayName, setDisplayName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileMessage, setProfileMessage] = useState(null);
+  const [passwordMessage, setPasswordMessage] = useState(null);
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -146,6 +153,62 @@ const Dashboard = () => {
   };
 
   const handleLogout = async () => { await logout(); navigate('/'); };
+
+  // Initialize display name when user loads
+  useEffect(() => {
+    if (user?.name) {
+      setDisplayName(user.name);
+    }
+  }, [user?.name]);
+
+  // Clear messages after 4 seconds
+  useEffect(() => {
+    if (profileMessage) {
+      const timer = setTimeout(() => setProfileMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [profileMessage]);
+
+  useEffect(() => {
+    if (passwordMessage) {
+      const timer = setTimeout(() => setPasswordMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [passwordMessage]);
+
+  // Save display name handler
+  const handleSaveProfile = async () => {
+    if (!displayName.trim()) {
+      setProfileMessage({ type: 'error', text: 'Display name cannot be empty.' });
+      return;
+    }
+    const result = await updateProfile(displayName.trim());
+    if (result.success) {
+      setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });
+    } else {
+      setProfileMessage({ type: 'error', text: result.error || 'Failed to update profile.' });
+    }
+  };
+
+  // Update password handler
+  const handleUpdatePassword = async () => {
+    if (newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+    const result = await updatePassword(newPassword);
+    if (result.success) {
+      setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      setPasswordMessage({ type: 'error', text: result.error || 'Failed to update password.' });
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -1699,6 +1762,80 @@ const Dashboard = () => {
                 <p>{user?.email || 'student@example.com'}</p>
               </div>
               <span className="settings-profile-badge">Student Plan</span>
+            </div>
+
+            {/* Profile Management */}
+            <div className="settings-section-header"><h3>Profile</h3></div>
+            <div className="settings-list">
+              <div className="settings-item settings-item-form">
+                <div className="settings-info">
+                  <div className="settings-icon-wrapper blue">{Icons.user}</div>
+                  <div>
+                    <h3>Display Name</h3>
+                    <p>This name appears in your dashboard greeting and sidebar</p>
+                  </div>
+                </div>
+                <div className="settings-form">
+                  <input
+                    type="text"
+                    className="settings-input"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                    maxLength={30}
+                  />
+                  <button className="settings-btn" onClick={handleSaveProfile}>
+                    Save Profile
+                  </button>
+                </div>
+              </div>
+              {profileMessage && (
+                <div className={`settings-message ${profileMessage.type}`}>
+                  {profileMessage.type === 'success' ? Icons.checkCircle : Icons.alertTriangle}
+                  <span>{profileMessage.text}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Account Security */}
+            <div className="settings-section-header"><h3>Account Security</h3></div>
+            <div className="settings-list">
+              <div className="settings-item settings-item-form">
+                <div className="settings-info">
+                  <div className="settings-icon-wrapper blue">{Icons.shield}</div>
+                  <div>
+                    <h3>Change Password</h3>
+                    <p>Update your account password</p>
+                  </div>
+                </div>
+                <div className="settings-form">
+                  <input
+                    type="password"
+                    className="settings-input"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min 6 characters)"
+                    autoComplete="new-password"
+                  />
+                  <input
+                    type="password"
+                    className="settings-input"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    autoComplete="new-password"
+                  />
+                  <button className="settings-btn" onClick={handleUpdatePassword}>
+                    Update Password
+                  </button>
+                </div>
+              </div>
+              {passwordMessage && (
+                <div className={`settings-message ${passwordMessage.type}`}>
+                  {passwordMessage.type === 'success' ? Icons.checkCircle : Icons.alertTriangle}
+                  <span>{passwordMessage.text}</span>
+                </div>
+              )}
             </div>
 
             {/* Appearance */}

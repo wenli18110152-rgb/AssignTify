@@ -10,13 +10,15 @@ export const AuthProvider = ({ children }) => {
 
   // Helper: extract a safe user object from Supabase session
   // Email is always normalized to lowercase for consistent lookups.
+  // Display name is read from user metadata if available.
   const buildUser = (session) => {
     if (!session?.user) return null;
     const email = session.user.email.toLowerCase();
+    const displayName = session.user.user_metadata?.display_name;
     return {
       id: session.user.id,
       email,
-      name: email.split('@')[0]
+      name: displayName || email.split('@')[0]
     };
   };
 
@@ -112,8 +114,44 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  // Update display name in Supabase user metadata
+  const updateProfile = async (displayName) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { display_name: displayName }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Update local user state immediately
+      setUser(prev => prev ? { ...prev, name: displayName || prev.email.split('@')[0] } : prev);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Failed to update profile' };
+    }
+  };
+
+  // Update password via Supabase Auth
+  const updatePassword = async (newPassword) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Failed to update password' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, updateProfile, updatePassword, loading }}>
       {children}
     </AuthContext.Provider>
   );
