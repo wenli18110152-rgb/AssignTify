@@ -266,12 +266,12 @@ const Dashboard = () => {
   };
 
   const navItems = [
-    { id: 'dashboard', icon: Icons.home, label: '🏠 Dashboard' },
-    { id: 'tasks', icon: Icons.list, label: '📝 My Tasks' },
-    { id: 'calendar', icon: Icons.calendar, label: '📅 Calendar' },
-    { id: 'study', icon: Icons.book, label: '📚 Study Plan' },
-    { id: 'stats', icon: Icons.chart, label: '📊 Progress' },
-    { id: 'settings', icon: Icons.gear, label: '⚙️ Settings' },
+    { id: 'dashboard', icon: Icons.home, label: 'Dashboard' },
+    { id: 'tasks', icon: Icons.list, label: 'My Tasks' },
+    { id: 'calendar', icon: Icons.calendar, label: 'Calendar' },
+    { id: 'study', icon: Icons.book, label: 'Study Plan' },
+    { id: 'stats', icon: Icons.chart, label: 'Progress' },
+    { id: 'settings', icon: Icons.gear, label: 'Settings' },
   ];
 
   const renderRiskBadge = (risk, size = 'sm') => (
