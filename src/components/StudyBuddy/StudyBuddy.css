@@ -4,8 +4,7 @@
   padding: 14px 14px 12px;
   background: var(--bg-card);
   border: 1.5px solid var(--border-color);
-  border-radius: 14px;
-  cursor: pointer;
+  border-radius: 16px;
   transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   overflow: hidden;
@@ -19,15 +18,8 @@
   right: 0;
   height: 3px;
   background: var(--btn-gradient);
-  border-radius: 14px 14px 0 0;
+  border-radius: 16px 16px 0 0;
   opacity: 0.7;
-}
-
-.sidebar-buddy-card:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--text-accent);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--shadow-color);
 }
 
 .sidebar-buddy-label {
@@ -37,27 +29,92 @@
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--text-accent);
-  margin-bottom: 8px;
-  opacity: 0.8;
+  margin-bottom: 10px;
+  opacity: 0.85;
 }
 
-.sidebar-buddy-main {
+/* === Selection Pill Buttons === */
+.sidebar-buddy-pills {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.sidebar-buddy-pill {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 4px;
+  background: transparent;
+  border: 1.5px solid var(--border-color);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: inherit;
 }
 
-.sidebar-buddy-emoji {
-  font-size: 22px;
+.sidebar-buddy-pill:hover {
+  border-color: var(--text-accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.sidebar-buddy-pill.active {
+  border-color: var(--text-accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--text-accent);
+}
+
+.sidebar-buddy-pill-emoji {
+  font-size: 13px;
   line-height: 1;
-  flex-shrink: 0;
+}
+
+.sidebar-buddy-pill-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.sidebar-buddy-pill.active .sidebar-buddy-pill-text {
+  color: var(--text-accent);
+}
+
+/* === Large Buddy Display === */
+.sidebar-buddy-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  padding: 6px 0 2px;
+  animation: buddy-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.sidebar-buddy-large-emoji {
+  font-size: 42px;
+  line-height: 1;
+  margin-bottom: 4px;
+  animation: buddy-float 4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(139, 92, 246, 0.2));
 }
 
 .sidebar-buddy-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.sidebar-buddy-personality {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-accent);
+  opacity: 0.8;
+  margin-bottom: 6px;
 }
 
 .sidebar-buddy-message {
@@ -68,4 +125,17 @@
   margin: 0;
   font-style: italic;
   opacity: 0.85;
+  max-width: 180px;
+}
+
+/* === Animations === */
+@keyframes buddy-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes buddy-bounce {
+  0% { opacity: 0; transform: scale(0.8) translateY(8px); }
+  60% { transform: scale(1.05) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }

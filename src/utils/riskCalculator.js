@@ -1,8 +1,16 @@
-// Calculate risk level based on deadline, priority, and study hours
-export const calculateRisk = (deadline, priority, hoursPerDay) => {
+// Get calendar-day difference (negative when overdue, 0 when due today, positive when future)
+// Normalizes both dates to midnight to avoid time-of-day edge cases.
+const getCalendarDayDiff = (deadline) => {
   const now = new Date();
   const deadlineDate = new Date(deadline);
-  const daysUntilDeadline = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
+  const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+  return Math.round((deadlineDateOnly - nowDate) / (1000 * 60 * 60 * 24));
+};
+
+// Calculate risk level based on deadline, priority, and study hours
+export const calculateRisk = (deadline, priority, hoursPerDay) => {
+  const daysUntilDeadline = getCalendarDayDiff(deadline);
   
   // Overdue tasks are always high risk
   if (daysUntilDeadline < 0) {
@@ -37,10 +45,7 @@ export const calculateRisk = (deadline, priority, hoursPerDay) => {
 
 // Get days until deadline (negative when overdue, 0 when due today)
 export const getDaysUntilDeadline = (deadline) => {
-  const now = new Date();
-  const deadlineDate = new Date(deadline);
-  const days = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
-  return days;
+  return getCalendarDayDiff(deadline);
 };
 
 // Get risk color for styling
@@ -121,9 +126,7 @@ export const isDueWithin6Hours = (deadline) => {
 
 // Get risk explanation (why the task is high/medium/low risk)
 export const getRiskExplanation = (deadline, priority, hoursPerDay) => {
-  const now = new Date();
-  const deadlineDate = new Date(deadline);
-  const daysUntilDeadline = Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24));
+  const daysUntilDeadline = getCalendarDayDiff(deadline);
   
   // Overdue explanations
   if (daysUntilDeadline < 0) {
@@ -164,9 +167,7 @@ export const getRiskExplanation = (deadline, priority, hoursPerDay) => {
 
 // Calculate numeric risk score (0-100) for a single task
 export const calculateRiskScore = (deadline, priority, hoursPerDay) => {
-  const now = new Date();
-  const deadlineDate = new Date(deadline);
-  const daysUntilDeadline = Math.max(0, Math.ceil((deadlineDate - now) / (1000 * 60 * 60 * 24)));
+  const daysUntilDeadline = Math.max(0, getCalendarDayDiff(deadline));
   
   // Time factor (0-40 points): closer deadline = higher score
   let timeScore = 0;
@@ -238,7 +239,7 @@ export const calculateAcademicHealth = (tasks) => {
 
   // Upcoming urgent: tasks due within 2 days
   const upcomingUrgent = incompleteTasks.filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    const days = getCalendarDayDiff(t.deadline);
     return days >= 0 && days <= 2;
   }).length;
 
@@ -260,7 +261,7 @@ export const calculateAcademicHealth = (tasks) => {
 
   // Upcoming deadline pressure: -5 per task due within 2 days, -3 per task due within 7 days
   const urgent7 = incompleteTasks.filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    const days = getCalendarDayDiff(t.deadline);
     return days >= 0 && days <= 7;
   }).length;
   const urgentPenalty = upcomingUrgent * 5 + Math.max(0, urgent7 - upcomingUrgent) * 3;
@@ -341,7 +342,9 @@ export const getWorkloadSummary = (tasks) => {
     let dayHours = 0;
     incompleteTasks.forEach(task => {
       const deadline = new Date(task.deadline);
-      const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
+      const deadlineDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+      const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const daysUntil = Math.round((deadlineDay - dateDay) / (1000 * 60 * 60 * 24));
       if (daysUntil >= 0 && daysUntil <= 3) {
         dayHours += task.hoursPerDay || 1;
       }
@@ -421,11 +424,11 @@ export const getDeadlineOverview = (tasks) => {
   const incompleteTasks = tasks.filter(t => !t.completed);
   const overdue = incompleteTasks.filter(t => new Date(t.deadline) < now).length;
   const dueToday = incompleteTasks.filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    const days = getCalendarDayDiff(t.deadline);
     return days === 0;
   }).length;
   const dueThisWeek = incompleteTasks.filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    const days = getCalendarDayDiff(t.deadline);
     return days >= 0 && days <= 7;
   }).length;
 
@@ -443,7 +446,7 @@ export const getDeadlineOverview = (tasks) => {
   // Build individual deadline entries for visual display
   const deadlines = incompleteTasks
     .map(t => {
-      const daysLeft = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+      const daysLeft = getCalendarDayDiff(t.deadline);
       const risk = daysLeft < 0 ? 'High' : daysLeft < 2 ? 'High' : daysLeft < 7 ? 'Medium' : 'Low';
       return { id: t.id, name: t.name, daysLeft, deadline: t.deadline, risk };
     })
@@ -529,7 +532,9 @@ export const calculateStudyLoadForecast = (tasks) => {
     let totalHours = 0;
     incompleteTasks.forEach(task => {
       const deadline = new Date(task.deadline);
-      const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
+      const deadlineDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+      const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const daysUntil = Math.round((deadlineDay - dateDay) / (1000 * 60 * 60 * 24));
       // Task contributes hours if deadline is within range
       if (daysUntil >= 0 && daysUntil <= 7) {
         totalHours += task.hoursPerDay || 1;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { calculateRisk } from '../utils/riskCalculator';
+import { calculateRisk, getDaysUntilDeadline } from '../utils/riskCalculator';
 import { calculateWorkload } from '../utils/workload';
 import { useAuth } from './AuthContext';
 import { getDemoTaskData } from '../utils/demoData';
@@ -284,7 +284,7 @@ export const TaskProvider = ({ children }) => {
         return taskDate < nearest ? taskDate : nearest;
       }, new Date(incompleteTasks[0].deadline));
       
-      daysUntilNextDeadline = Math.ceil((nearestDeadline - new Date()) / (1000 * 60 * 60 * 24));
+      daysUntilNextDeadline = getDaysUntilDeadline(nearestDeadline);
     }
 
     return {
@@ -309,8 +309,7 @@ export const TaskProvider = ({ children }) => {
       date.setDate(date.getDate() + i);
       let dayHours = 0;
       incompleteTasks.forEach(task => {
-        const deadline = new Date(task.deadline);
-        const daysUntil = Math.ceil((deadline - date) / (1000 * 60 * 60 * 24));
+        const daysUntil = getDaysUntilDeadline(task.deadline);
         if (daysUntil >= 0 && daysUntil <= 3) {
           dayHours += task.hoursPerDay || 1;
         }
@@ -343,7 +342,7 @@ export const TaskProvider = ({ children }) => {
     if (incompleteTasks.length > 0) {
       const sorted = [...incompleteTasks].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
       const nearest = sorted[0];
-      const daysLeft = Math.ceil((new Date(nearest.deadline) - now) / (1000 * 60 * 60 * 24));
+      const daysLeft = getDaysUntilDeadline(nearest.deadline);
       upcomingDeadline = { task: nearest, daysLeft };
     }
 

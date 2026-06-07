@@ -1,3 +1,13 @@
+// Get calendar-day difference (same logic as riskCalculator.js)
+// Normalizes both dates to midnight to avoid time-of-day edge cases.
+const getCalendarDayDiff = (deadline) => {
+  const now = new Date();
+  const deadlineDate = new Date(deadline);
+  const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+  return Math.round((deadlineDateOnly - nowDate) / (1000 * 60 * 60 * 24));
+};
+
 // Supportive messages for different risk levels
 const highRiskMessages = [
   "This one's coming up fast — but you've got this. Let's break it into small steps.",
@@ -220,7 +230,7 @@ export const getSmartRecommendation = (tasks) => {
   });
 
   const task = sorted[0];
-  const daysLeft = Math.ceil((new Date(task.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+  const daysLeft = getCalendarDayDiff(task.deadline);
   const risk = getRiskLevelFromDays(daysLeft, task.priority, task.hoursPerDay);
 
   let reason = '';
@@ -274,9 +284,7 @@ export const generateReminders = (tasks) => {
   const now = new Date();
 
   incompleteTasks.forEach(task => {
-    const deadline = new Date(task.deadline);
-    const diffTime = deadline - now;
-    const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const daysLeft = getCalendarDayDiff(task.deadline);
     const focus = getTaskFocus(task.description);
 
     let category, message;
@@ -351,7 +359,7 @@ export const getStudentInsights = (tasks) => {
   const overdueCount = overdueTasks.length;
   const completionRate = totalCount > 0 ? completedTasks.length / totalCount : 0;
   const upcomingUrgent = incompleteTasks.filter(t => {
-    const days = Math.ceil((new Date(t.deadline) - now) / (1000 * 60 * 60 * 24));
+    const days = getCalendarDayDiff(t.deadline);
     return days >= 0 && days <= 2;
   });
 
@@ -360,7 +368,7 @@ export const getStudentInsights = (tasks) => {
   // Risk spotlight — always show the highest-risk incomplete task
   if (overdueCount > 0) {
     const mostOverdue = overdueTasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline))[0];
-    const overdueDays = Math.abs(Math.ceil((new Date(mostOverdue.deadline) - now) / (1000 * 60 * 60 * 24)));
+    const overdueDays = Math.abs(getCalendarDayDiff(mostOverdue.deadline));
     insights.push({
       icon: 'alertTriangle',
       text: `Your biggest risk right now is ${mostOverdue.name} — it's overdue by ${overdueDays} day${overdueDays !== 1 ? 's' : ''}.`,
@@ -368,7 +376,7 @@ export const getStudentInsights = (tasks) => {
     });
   } else if (upcomingUrgent.length > 0) {
     const urgentTask = upcomingUrgent[0];
-    const daysLeft = Math.ceil((new Date(urgentTask.deadline) - now) / (1000 * 60 * 60 * 24));
+    const daysLeft = getCalendarDayDiff(urgentTask.deadline);
     insights.push({
       icon: 'target',
       text: `Your biggest focus right now is ${urgentTask.name} — ${daysLeft === 0 ? 'due today' : `due in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}.`,
