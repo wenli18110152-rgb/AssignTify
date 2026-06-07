@@ -3,28 +3,11 @@ import { calculateRisk, getDaysUntilDeadline } from '../utils/riskCalculator';
 import { calculateWorkload } from '../utils/workload';
 import { useAuth } from './AuthContext';
 import { getDemoTaskData } from '../utils/demoData';
+import { supabase } from '../lib/supabaseClient';
+
 const TaskContext = createContext(null);
 
-// Backend API base URL (Vite proxies /api to localhost:8000 in dev)
-const API_URL = import.meta.env.VITE_API_URL || '';
-
-/**
- * Generic fetch wrapper for the backend API.
- * Throws on network errors or non-2xx responses.
- */
-async function apiFetch(path, options = {}) {
-  const url = `${API_URL}${path}`;
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ detail: res.statusText }));
-    const message = errorBody.detail || `API error: ${res.status}`;
-    throw new Error(message);
-  }
-  return res.json();
-}
+const TABLE = 'tasks';
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
@@ -45,16 +28,24 @@ export const TaskProvider = ({ children }) => {
     completed: row.completed ?? false,
   }), []);
 
-  // Load tasks via FastAPI backend only
+  // Load tasks directly from Supabase (bypasses backend — works on localhost & Vercel)
   useEffect(() => {
     const loadTasks = async () => {
       if (user?.email) {
         try {
-          const data = await apiFetch(`/api/tasks/${encodeURIComponent(user.email)}`);
-          setTasks(data.tasks || []);
-        } catch (backendError) {
-          console.error('Failed to load tasks from backend:', backendError.message);
-          // Keep previous tasks — don't wipe them
+          const { data, error } = await supabase
+            .from(TABLE)
+            .select('*')
+            .eq('user_email', user.email)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Failed to load tasks from Supabase:', error.message);
+          } else {
+            setTasks((data || []).map(mapFromSupabase));
+          }
+        } catch (err) {
+          console.error('Failed to load tasks from Supabase:', err.message);
         }
       } else {
         setTasks([]);
@@ -98,8 +89,7 @@ export const TaskProvider = ({ children }) => {
     }
 
     try {
-      // Send snake_case fields to the backend TaskCreate model
-      const payload = {
+      const row = {
         id: newTask.id,
         user_email: user.email,
         name: newTask.name,
@@ -111,20 +101,22 @@ export const TaskProvider = ({ children }) => {
         completed: newTask.completed
       };
 
-      const data = await apiFetch('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const { data, error } = await supabase
+        .from(TABLE)
+        .insert(row)
+        .select()
+        .single();
 
-      // Backend returns { task: { camelCase } } via _row_to_task
-      const savedTask = data.task;
+      if (error) throw error;
+
+      const savedTask = mapFromSupabase(data);
       setTasks(prev => [savedTask, ...prev]);
       return savedTask;
     } catch (error) {
       console.error('Error adding task:', error);
       throw error;
     }
-  }, [demoMode, user?.email]);
+  }, [demoMode, user?.email, mapFromSupabase]);
 
   // Update a task
   const updateTask = useCallback(async (taskId, updates) => {
@@ -144,7 +136,7 @@ export const TaskProvider = ({ children }) => {
     ));
 
     try {
-      // Map frontend camelCase → backend TaskUpdate snake_case
+      // Map frontend camelCase → Supabase snake_case
       const body = {};
       if (updates.name !== undefined) body.name = updates.name;
       if (updates.description !== undefined) body.description = updates.description;
@@ -153,10 +145,12 @@ export const TaskProvider = ({ children }) => {
       if (updates.hoursPerDay !== undefined) body.hours_per_day = updates.hoursPerDay;
       if (updates.completed !== undefined) body.completed = updates.completed;
 
-      await apiFetch(`/api/tasks/${taskId}`, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-      });
+      const { error } = await supabase
+        .from(TABLE)
+        .update(body)
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating task:', error);
       // Revert optimistic update on failure
@@ -183,9 +177,12 @@ export const TaskProvider = ({ children }) => {
     setTasks(prev => prev.filter(task => task.id !== taskId));
 
     try {
-      await apiFetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
-      });
+      const { error } = await supabase
+        .from(TABLE)
+        .delete()
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting task:', error);
       // Revert optimistic delete on failure
@@ -207,6 +204,7 @@ export const TaskProvider = ({ children }) => {
 
     // Capture previous state for rollback
     const previousTask = tasks.find(t => t.id === taskId);
+    const newStatus = previousTask ? !previousTask.completed : false;
 
     // Optimistic toggle
     setTasks(prev => prev.map(task =>
@@ -214,9 +212,12 @@ export const TaskProvider = ({ children }) => {
     ));
 
     try {
-      await apiFetch(`/api/tasks/${taskId}/toggle`, {
-        method: 'PATCH',
-      });
+      const { error } = await supabase
+        .from(TABLE)
+        .update({ completed: newStatus })
+        .eq('id', taskId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error toggling task:', error);
       // Revert optimistic toggle on failure
