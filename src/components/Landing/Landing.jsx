@@ -36,7 +36,7 @@ const Landing = () => {
             <h1 className="hero-title">
               Start today, stress less tomorrow.
             </h1>
-            <p className="hero-subtitle">
+            <p className="hero-subtitle landing-description-text">
               AssignTify helps students organise deadlines, focus on one task at
               a time, and feel more in control during busy study periods — without the overwhelm.
             </p>
