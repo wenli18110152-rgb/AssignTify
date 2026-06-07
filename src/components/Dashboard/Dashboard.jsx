@@ -39,6 +39,7 @@ const Dashboard = () => {
   const [activePage, setActivePage] = useState('dashboard');
   const [healthRingReady, setHealthRingReady] = useState(false);
   const [completionToast, setCompletionToast] = useState(null);
+  const [toastFading, setToastFading] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
 
@@ -108,6 +109,8 @@ const Dashboard = () => {
   };
 
   const filteredTasks = getFilteredAndSortedTasks();
+  // Dashboard "All Tasks" section: exclude completed so they only appear in the Completed Tasks section
+  const dashboardActiveTasks = filteredTasks.filter(t => !t.completed);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   useEffect(() => {
@@ -132,8 +135,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (completionToast) {
-      const timer = setTimeout(() => setCompletionToast(null), 2200);
-      return () => clearTimeout(timer);
+      setToastFading(false);
+      const fadeTimer = setTimeout(() => setToastFading(true), 2000);
+      const removeTimer = setTimeout(() => {
+        setCompletionToast(null);
+        setToastFading(false);
+      }, 2500);
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(removeTimer);
+      };
     }
   }, [completionToast]);
 
@@ -142,7 +153,7 @@ const Dashboard = () => {
     try {
       await toggleComplete(taskId);
       if (task && !task.completed) {
-        setCompletionToast('Nice! One less thing to worry about.');
+        setCompletionToast({ title: '\ud83c\udf89 Task completed!', message: 'Great job staying on track.' });
       }
     } catch (error) {
       alert('Failed to update task status. Please try again.');
@@ -994,7 +1005,7 @@ const Dashboard = () => {
               )}
             </section>
 
-            {/* All Tasks */}
+            {/* All Tasks — show only active (incomplete) tasks; completed tasks live in the section below */}
             <section className="task-list">
               <div className="task-list-header">
                 <h2>All Tasks</h2>
@@ -1034,7 +1045,7 @@ const Dashboard = () => {
                   </button>
                 </div>
               </div>
-              {filteredTasks.length === 0 ? (
+              {dashboardActiveTasks.length === 0 ? (
                 <div className="empty-state onboarding">
                   <div className="onboarding-content">
                     <h3>Welcome to AssignTify</h3>
@@ -1060,7 +1071,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="tasks">
-                  {filteredTasks.map(task => {
+                  {dashboardActiveTasks.map(task => {
                     const risk = calculateRisk(task.deadline, task.priority, task.hoursPerDay);
                     const timeRemaining = getTimeRemaining(task.deadline);
                     const urgencyClass = getUrgencyClass(task.deadline);
@@ -1123,32 +1134,32 @@ const Dashboard = () => {
               )}
             </section>
 
-            {/* Completed Tasks */}
-            <section className="completed-section">
-              <div className="completed-section-header">
-                <h2>Completed Tasks</h2>
-                {completedTasks.length > 0 && (
+            {/* Completed Tasks — only show when there are completed tasks */}
+            {completedTasks.length > 0 && (
+              <section className="completed-section">
+                <div className="completed-section-header">
+                  <h2>Completed Tasks</h2>
                   <span className="completed-count-badge">{completedTasks.length} done</span>
-                )}
-              </div>
-              <div className="completed-cards-area">
-                {completedTasks.length > 0 ? (
+                </div>
+                <div className="completed-cards-area">
                   <div className="completed-tasks-list">
                     {completedTasks.map(task => (
                       <div key={task.id} className="completed-task-item">
-                        <span className="completed-task-check">{Icons.checkCircle}</span>
+                        <button
+                          className="completed-task-uncheck"
+                          onClick={() => handleToggleComplete(task.id)}
+                          title="Mark as incomplete"
+                        >
+                          {Icons.checkCircle}
+                        </button>
                         <span className="completed-task-name">{task.name}</span>
                         <span className="completed-task-date">Completed &middot; {formatDateShort(task.deadline)}</span>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="completed-empty">
-                    <p className="completed-empty-text">No completed tasks yet.</p>
-                  </div>
-                )}
-              </div>
-            </section>
+                </div>
+              </section>
+            )}
           </>
         )}
 
@@ -1168,14 +1179,6 @@ const Dashboard = () => {
                 </select>
               </div>
               <div className="filter-group">
-                <label>Status:</label>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="filter-select">
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-              <div className="filter-group">
                 <label>Sort:</label>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="filter-select">
                   <option value="deadline">Deadline (Nearest)</option>
@@ -1186,48 +1189,87 @@ const Dashboard = () => {
                   <option value="name">Name (A-Z)</option>
                 </select>
               </div>
+              <button className="add-task-btn-header" onClick={() => navigate('/add-task')}>
+                {Icons.plus} Add Task
+              </button>
             </div>
-            {filteredTasks.length === 0 ? (
-              <div className="empty-state">
-                <p>No tasks match your filters. Try adjusting them or add a new task.</p>
-              </div>
-            ) : (
-              <div className="tasks">
-                {filteredTasks.map(task => {
-                  const risk = calculateRisk(task.deadline, task.priority, task.hoursPerDay);
-                  const timeRemaining = getTimeRemaining(task.deadline);
-                  const urgencyClass = getUrgencyClass(task.deadline);
-                  const riskTint = getRiskTintClass(risk);
-                  
-                  return (
-                    <div key={task.id} className={`task-card ${task.completed ? 'completed' : ''} ${urgencyClass} ${riskTint}`}>
-                      <div className="task-checkbox">
-                        <input type="checkbox" checked={task.completed} onChange={() => handleToggleComplete(task.id)} onClick={(e) => e.stopPropagation()} />
-                      </div>
-                      <div className="task-content" onClick={() => navigate(`/task/${task.id}`)}>
-                        <div className="task-header">
-                          <span className="task-name">{task.name}</span>
-                          {renderRiskBadge(risk, 'sm')}
-                        </div>
-                        <div className="task-meta">
-                          <span className="task-meta-item">{Icons.calendar} {formatDate(task.deadline)}</span>
-                          <span className="task-meta-item" style={timeRemaining.urgent ? { color: '#DC2626', fontWeight: 700 } : {}}>
-                            {Icons.clock} {timeRemaining.text}
-                          </span>
-                          <span className="task-meta-item">{Icons.book} {task.hoursPerDay || 0}h/day</span>
-                          {renderDueLabel(task.deadline, task.completed)}
-                        </div>
-                        <span className="task-risk-explanation">{getRiskExplanation(task.deadline, task.priority, task.hoursPerDay)}</span>
-                      </div>
-                      <div className="task-actions">
-                        <button className="task-action-btn view-btn" title="View Details" onClick={(e) => { e.stopPropagation(); navigate(`/task/${task.id}`); }}>{Icons.eye}</button>
-                        <button className="task-action-btn edit-btn" title="Edit Task" onClick={(e) => { e.stopPropagation(); navigate(`/edit-task/${task.id}`); }}>{Icons.edit}</button>
-                        <button className="task-action-btn complete-btn" title={task.completed ? 'Mark Incomplete' : 'Mark Complete'} onClick={(e) => { e.stopPropagation(); handleToggleComplete(task.id); }}>{Icons.checkCircle}</button>
-                        <button className="task-action-btn delete-btn" title="Delete Task" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}>{Icons.trash}</button>
-                      </div>
+
+            {/* Active Tasks Section */}
+            {(() => {
+              const activeFiltered = getFilteredAndSortedTasks().filter(t => !t.completed);
+              return (
+                <>
+                  {activeFiltered.length === 0 ? (
+                    <div className="empty-state">
+                      <p>No active tasks match your filters. Try adjusting them or add a new task.</p>
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div className="tasks">
+                      {activeFiltered.map(task => {
+                        const risk = calculateRisk(task.deadline, task.priority, task.hoursPerDay);
+                        const timeRemaining = getTimeRemaining(task.deadline);
+                        const urgencyClass = getUrgencyClass(task.deadline);
+                        const riskTint = getRiskTintClass(risk);
+                        
+                        return (
+                          <div key={task.id} className={`task-card ${urgencyClass} ${riskTint}`}>
+                            <div className="task-checkbox">
+                              <input type="checkbox" checked={task.completed} onChange={() => handleToggleComplete(task.id)} onClick={(e) => e.stopPropagation()} />
+                            </div>
+                            <div className="task-content" onClick={() => navigate(`/task/${task.id}`)}>
+                              <div className="task-header">
+                                <span className="task-name">{task.name}</span>
+                                {renderRiskBadge(risk, 'sm')}
+                              </div>
+                              <div className="task-meta">
+                                <span className="task-meta-item">{Icons.calendar} {formatDate(task.deadline)}</span>
+                                <span className="task-meta-item" style={timeRemaining.urgent ? { color: '#DC2626', fontWeight: 700 } : {}}>
+                                  {Icons.clock} {timeRemaining.text}
+                                </span>
+                                <span className="task-meta-item">{Icons.book} {task.hoursPerDay || 0}h/day</span>
+                                {renderDueLabel(task.deadline, task.completed)}
+                              </div>
+                              <span className="task-risk-explanation">{getRiskExplanation(task.deadline, task.priority, task.hoursPerDay)}</span>
+                            </div>
+                            <div className="task-actions">
+                              <button className="task-action-btn view-btn" title="View Details" onClick={(e) => { e.stopPropagation(); navigate(`/task/${task.id}`); }}>{Icons.eye}</button>
+                              <button className="task-action-btn edit-btn" title="Edit Task" onClick={(e) => { e.stopPropagation(); navigate(`/edit-task/${task.id}`); }}>{Icons.edit}</button>
+                              <button className="task-action-btn complete-btn" title="Mark Complete" onClick={(e) => { e.stopPropagation(); handleToggleComplete(task.id); }}>{Icons.checkCircle}</button>
+                              <button className="task-action-btn delete-btn" title="Delete Task" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}>{Icons.trash}</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Completed Tasks Section — only show when there are completed tasks */}
+            {completedTasks.length > 0 && (
+              <div className="my-tasks-completed-section">
+                <div className="completed-section-header">
+                  <h2>Completed Tasks</h2>
+                  <span className="completed-count-badge">{completedTasks.length} done</span>
+                </div>
+                <div className="completed-cards-area">
+                  <div className="completed-tasks-list">
+                    {completedTasks.map(task => (
+                      <div key={task.id} className="completed-task-item">
+                        <button
+                          className="completed-task-uncheck"
+                          onClick={() => handleToggleComplete(task.id)}
+                          title="Mark as incomplete"
+                        >
+                          {Icons.checkCircle}
+                        </button>
+                        <span className="completed-task-name">{task.name}</span>
+                        <span className="completed-task-date">Completed &middot; {formatDateShort(task.deadline)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </section>
@@ -1946,9 +1988,12 @@ const Dashboard = () => {
 
       {/* Completion Toast */}
       {completionToast && (
-        <div className="completion-toast">
+        <div className={`completion-toast ${toastFading ? 'fading' : ''}`}>
           <div className="completion-toast-icon">{Icons.checkCircle}</div>
-          <span className="completion-toast-text">{completionToast}</span>
+          <div className="completion-toast-content">
+            <span className="completion-toast-title">{completionToast.title}</span>
+            <span className="completion-toast-message">{completionToast.message}</span>
+          </div>
         </div>
       )}
     </div>
