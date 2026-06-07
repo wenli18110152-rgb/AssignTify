@@ -104,6 +104,40 @@ const themes = {
       '--card-tint': 'rgba(59, 130, 246, 0.05)',
       '--focus-glow': 'rgba(59, 130, 246, 0.2)',
     }
+  },
+  cute: {
+    name: 'Cute Study Mode',
+    emoji: '🌸',
+    colors: {
+      '--primary-50': '#FFF0F5',
+      '--primary-100': '#FFE4EF',
+      '--primary-200': '#FECDD8',
+      '--primary-300': '#FBA4BF',
+      '--primary-400': '#F472A0',
+      '--primary-500': '#EC4899',
+      '--primary-600': '#DB2777',
+      '--primary-700': '#BE185D',
+      '--primary-800': '#9D174D',
+      '--primary-900': '#831843',
+      '--bg-gradient': 'linear-gradient(180deg, #FFF5F7 0%, #FFE8EE 40%, #FFDCE5 100%)',
+      '--bg-sidebar': 'linear-gradient(180deg, #FFF8FA 0%, #FFE8EE 100%)',
+      '--bg-card': '#FFF8FA',
+      '--bg-card-hover': '#FFF0F5',
+      '--btn-gradient': 'linear-gradient(135deg, #F472B6 0%, #EC4899 100%)',
+      '--btn-shadow': 'rgba(236, 72, 153, 0.25)',
+      '--border-color': '#FBD5E5',
+      '--text-accent': '#DB2777',
+      '--text-primary': '#4A1942',
+      '--text-secondary': '#8B5E7A',
+      '--shadow-color': 'rgba(236, 72, 153, 0.06)',
+      '--badge-bg': '#FCE7F3',
+      '--badge-text': '#DB2777',
+      '--accent-glow': 'rgba(244, 114, 182, 0.15)',
+      '--accent-soft': 'rgba(244, 114, 182, 0.06)',
+      '--sidebar-gradient': 'linear-gradient(180deg, #FFF8FA 0%, #FFE8EE 100%)',
+      '--card-tint': 'rgba(244, 114, 182, 0.04)',
+      '--focus-glow': 'rgba(244, 114, 182, 0.15)',
+    }
   }
 };
 

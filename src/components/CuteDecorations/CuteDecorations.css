@@ -1,0 +1,118 @@
+/* CuteDecorations — floating sparkles, hearts, cats, flowers for Cute Study Mode */
+.cute-decorations {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cute-decoration {
+  position: absolute;
+  will-change: transform, opacity;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  user-select: none;
+  line-height: 1;
+}
+
+/* Sparkles — float with twinkle pulse */
+.cute-decoration--sparkle {
+  animation-name: cuteFloat, cuteTwinkle;
+  animation-duration: inherit, 3s;
+  color: #F9A8D4;
+}
+
+/* Hearts — gentle sway drift */
+.cute-decoration--heart {
+  animation-name: cuteSway;
+  color: #F472B6;
+}
+
+/* Cats — slow bob */
+.cute-decoration--cat {
+  animation-name: cuteBob;
+}
+
+/* Flowers — gentle spin and float */
+.cute-decoration--flower {
+  animation-name: cuteFloat, cuteSpin;
+  animation-duration: inherit, 12s;
+  color: #FBCFE8;
+}
+
+/* ===== Keyframes ===== */
+
+@keyframes cuteFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-18px) rotate(5deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-4deg);
+  }
+  75% {
+    transform: translateY(-22px) rotate(3deg);
+  }
+}
+
+@keyframes cuteTwinkle {
+  0%, 100% {
+    opacity: inherit;
+    transform: scale(1);
+  }
+  50% {
+    opacity: inherit;
+    transform: scale(1.35);
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes cuteSway {
+  0%, 100% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  25% {
+    transform: translateX(10px) translateY(-10px) scale(1.06);
+  }
+  50% {
+    transform: translateX(-6px) translateY(-16px) scale(0.97);
+  }
+  75% {
+    transform: translateX(8px) translateY(-6px) scale(1.03);
+  }
+}
+
+@keyframes cuteBob {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-12px) rotate(-4deg);
+  }
+  60% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+}
+
+@keyframes cuteSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive — reduce on mobile */
+@media (max-width: 640px) {
+  .cute-decoration {
+    font-size: 0.7em !important;
+  }
+
+  .cute-decoration--cat {
+    display: none;
+  }
+}

@@ -2,16 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTasks } from '../../context/TaskContext';
+import { useStudyBuddy } from '../../context/StudyBuddyContext';
+import { studyBuddies, buddyList, getRandomMessage } from '../../utils/studyBuddyData';
 import { getGreeting, getNextAction, getRecommendedTask, getAIRecommendationMessage, getStudyNextStep, getSortedStudyTasks, getTaskSuggestion, getSmartRecommendation, generateReminders, getStudentInsights } from '../../utils/messages';
 import { calculateRisk, getDaysUntilDeadline, getRiskColor, getTimeRemaining, isDueWithin24Hours, isDueWithin6Hours, getRiskExplanation, calculateRiskScore, getRiskLevel, getRiskLevelColor, calculateAcademicHealth, calculateStudyLoadForecast, getWorkloadSummary, getStudyMomentum, getDeadlineOverview, getWeeklyInsights } from '../../utils/riskCalculator';
 import ThemeToggle from '../ThemeToggle/ThemeToggle';
 import Icons from '../../utils/icons';
 import StudyPlanPage from '../StudyPlanPage/StudyPlanPage';
+import StudyBuddyCard from '../StudyBuddy/StudyBuddy';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout, updateProfile, updatePassword } = useAuth();
+  const { studyBuddy, setStudyBuddy, getBuddyData, getBuddyMessage } = useStudyBuddy();
+  const buddy = getBuddyData();
   const { 
     tasks, 
     addTask,
@@ -654,6 +659,8 @@ const Dashboard = () => {
           ))}
         </nav>
 
+        <StudyBuddyCard />
+
         <div className="sidebar-footer">
           <div className="sidebar-user">
             <span className="user-avatar">{user?.name?.charAt(0).toUpperCase() || 'S'}</span>
@@ -735,8 +742,10 @@ const Dashboard = () => {
                 <div className="hero-right-wrapper">
                   {/* Mascot area */}
                   <div className="hero-mascot-area">
-                    <div className="hero-mascot-icon">{Icons.coach}</div>
-                    <span className="hero-mascot-label">Your Study Buddy</span>
+                    <div className="hero-mascot-icon">
+                      <span className="hero-buddy-emoji">{buddy.emoji}</span>
+                    </div>
+                    <span className="hero-mascot-label">{buddy.name}</span>
                   </div>
                   <div className="hero-right">
                     <div className="hero-health-ring-wrapper">
@@ -782,18 +791,18 @@ const Dashboard = () => {
                 <div className="study-buddy-card">
                   <div className="study-buddy-header">
                     <div className="study-buddy-avatar">
-                      {Icons.coach}
+                      <span className="study-buddy-avatar-emoji">{buddy.emoji}</span>
                     </div>
                     <div className="study-buddy-title-area">
                       <h3>Student Success Coach</h3>
-                      <span className="study-buddy-subtitle">AI-powered academic guidance</span>
+                      <span className="study-buddy-subtitle">AI-powered academic guidance &middot; {buddy.name}</span>
                     </div>
                   </div>
                   <div className="study-buddy-messages">
                     {buddyMessages.map((msg, index) => (
                       <div key={index} className={`buddy-message ${msg.type}`}>
                         <div className="buddy-message-avatar">
-                          {Icons.coach}
+                          <span className="buddy-message-avatar-emoji">{buddy.emoji}</span>
                         </div>
                         <div className="buddy-message-bubble">
                           <p>{msg.text}</p>
@@ -803,7 +812,7 @@ const Dashboard = () => {
                     {buddyMessages.length === 0 && (
                       <div className="buddy-message encouraging">
                         <div className="buddy-message-avatar">
-                          {Icons.coach}
+                          <span className="buddy-message-avatar-emoji">{buddy.emoji}</span>
                         </div>
                         <div className="buddy-message-bubble">
                           <p>Add your first task and I'll provide personalised study recommendations.</p>
@@ -1845,6 +1854,29 @@ const Dashboard = () => {
                 <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.palette}</div><div><h3>Theme</h3><p>Choose your preferred color scheme</p></div></div>
                 <ThemeToggle />
               </div>
+            </div>
+
+            {/* Study Buddy */}
+            <div className="settings-section-header"><h3>Study Buddy</h3></div>
+            <div className="settings-list">
+              {buddyList.map(b => (
+                <button
+                  key={b.id}
+                  className={`settings-item study-buddy-option ${studyBuddy === b.id ? 'active' : ''}`}
+                  onClick={() => setStudyBuddy(b.id)}
+                >
+                  <div className="settings-info">
+                    <div className="study-buddy-option-emoji">{b.emoji}</div>
+                    <div>
+                      <h3>{b.name}</h3>
+                      <p>{b.personality}</p>
+                    </div>
+                  </div>
+                  {studyBuddy === b.id && (
+                    <span className="settings-status-badge active">Selected</span>
+                  )}
+                </button>
+              ))}
             </div>
 
             {/* Study Preferences */}

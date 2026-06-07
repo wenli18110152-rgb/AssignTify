@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { TaskProvider } from './context/TaskContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { StudyBuddyProvider } from './context/StudyBuddyContext';
 import Landing from './components/Landing/Landing';
 import Auth from './components/Auth/Auth';
 import Dashboard from './components/Dashboard/Dashboard';
@@ -10,6 +11,7 @@ import StudyPlanning from './components/StudyPlanning/StudyPlanning';
 import ResultScreen from './components/ResultScreen/ResultScreen';
 import TaskDetail from './components/TaskDetail/TaskDetail';
 import EditTask from './components/EditTask/EditTask';
+import CuteDecorations from './components/CuteDecorations/CuteDecorations';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -104,13 +106,16 @@ function AppRoutes() {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <AuthProvider>
-          <TaskProvider>
-            <AppRoutes />
-          </TaskProvider>
-        </AuthProvider>
-      </Router>
+      <StudyBuddyProvider>
+        <CuteDecorations />
+        <Router>
+          <AuthProvider>
+            <TaskProvider>
+              <AppRoutes />
+            </TaskProvider>
+          </AuthProvider>
+        </Router>
+      </StudyBuddyProvider>
     </ThemeProvider>
   );
 }

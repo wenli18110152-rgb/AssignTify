@@ -95,6 +95,19 @@
 
 .sidebar-footer { padding: 12px 10px; border-top: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; }
 
+/* Study Buddy — Hero mascot emoji */
+.hero-buddy-emoji { font-size: 36px; line-height: 1; }
+
+/* Study Buddy — Coach section avatars */
+.study-buddy-avatar-emoji { font-size: 28px; line-height: 1; }
+.buddy-message-avatar-emoji { font-size: 20px; line-height: 1; }
+
+/* Study Buddy — Settings option */
+.study-buddy-option { cursor: pointer; background: transparent; border: 1.5px solid var(--border-color); text-align: left; width: 100%; transition: all 0.2s ease; }
+.study-buddy-option:hover { border-color: var(--text-accent); background: var(--accent-soft); }
+.study-buddy-option.active { border-color: var(--text-accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--text-accent); }
+.study-buddy-option-emoji { font-size: 28px; line-height: 1; flex-shrink: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); border-radius: 10px; }
+
 .sidebar-user {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;

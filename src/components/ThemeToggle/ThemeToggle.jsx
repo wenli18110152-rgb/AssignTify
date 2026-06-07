@@ -18,6 +18,7 @@ const ThemeToggle = () => {
       case 'light': return '#3B82F6';
       case 'lavender': return '#8B5CF6';
       case 'dark': return '#1E293B';
+      case 'cute': return '#F472B6';
       default: return '#64748B';
     }
   };
