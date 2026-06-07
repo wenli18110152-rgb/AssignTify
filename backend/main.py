@@ -70,13 +70,22 @@ print("[INIT] Supabase client created successfully.")
 # ---------------------------------------------------------------------------
 app = FastAPI(title="AssignTify API", version="1.0.0")
 
+# Allowed CORS origins — add your deployed Vercel URL here when available
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # Vite dev server
+    "http://localhost:3000",   # alternate dev port
+    "http://127.0.0.1:5173",
+    # "https://your-app.vercel.app",  # Uncomment and replace with your Vercel URL
+]
+
+# Also allow any VERCEL_URL env var (set automatically by Vercel)
+vercel_url = os.getenv("VERCEL_URL")
+if vercel_url:
+    ALLOWED_ORIGINS.append(f"https://{vercel_url}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev server
-        "http://localhost:3000",   # alternate dev port
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
