@@ -75,7 +75,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",   # Vite dev server
     "http://localhost:3000",   # alternate dev port
     "http://127.0.0.1:5173",
-    # "https://your-app.vercel.app",  # Uncomment and replace with your Vercel URL
+    "https://assign-tify.vercel.app",  # Production Vercel deployment
 ]
 
 # Also allow any VERCEL_URL env var (set automatically by Vercel)
