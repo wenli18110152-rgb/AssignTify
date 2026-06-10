@@ -1979,7 +1979,7 @@ const Dashboard = () => {
                 <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.info}</div><div><h3>App Version</h3><p>AssignTify v1.0.0</p></div></div>
               </div>
               <div className="settings-item">
-                <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.rocket}</div><div><h3>Build</h3><p>React + Vite + Supabase</p></div></div>
+                <div className="settings-info"><div className="settings-icon-wrapper blue">{Icons.rocket}</div><div><h3>Build</h3><p>React + Vite + FastAPI + Supabase</p></div></div>
               </div>
             </div>
           </section>
