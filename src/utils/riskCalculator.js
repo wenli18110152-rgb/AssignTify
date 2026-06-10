@@ -1,8 +1,10 @@
 // Get calendar-day difference (negative when overdue, 0 when due today, positive when future)
 // Normalizes both dates to midnight to avoid time-of-day edge cases.
 const getCalendarDayDiff = (deadline) => {
+  if (!deadline) return 999; // Treat missing deadline as far-future to avoid crashes
   const now = new Date();
   const deadlineDate = new Date(deadline);
+  if (isNaN(deadlineDate.getTime())) return 999; // Invalid date → far-future
   const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
   return Math.round((deadlineDateOnly - nowDate) / (1000 * 60 * 60 * 24));
@@ -69,8 +71,10 @@ export const getRiskEmoji = (risk) => {
 
 // Get detailed time remaining (for real-time display)
 export const getTimeRemaining = (deadline) => {
+  if (!deadline) return { overdue: false, text: 'No deadline', urgent: false, days: 0, hours: 0, minutes: 0, totalMinutes: 0 };
   const now = new Date();
   const deadlineDate = new Date(deadline);
+  if (isNaN(deadlineDate.getTime())) return { overdue: false, text: 'No deadline', urgent: false, days: 0, hours: 0, minutes: 0, totalMinutes: 0 };
   const diffTime = deadlineDate - now;
   
   if (diffTime <= 0) {
@@ -108,8 +112,10 @@ export const getTimeRemaining = (deadline) => {
 
 // Check if task is due within 24 hours
 export const isDueWithin24Hours = (deadline) => {
+  if (!deadline) return false;
   const now = new Date();
   const deadlineDate = new Date(deadline);
+  if (isNaN(deadlineDate.getTime())) return false;
   const diffTime = deadlineDate - now;
   const hours24 = 24 * 60 * 60 * 1000;
   return diffTime > 0 && diffTime <= hours24;
@@ -117,8 +123,10 @@ export const isDueWithin24Hours = (deadline) => {
 
 // Check if task is due within 6 hours
 export const isDueWithin6Hours = (deadline) => {
+  if (!deadline) return false;
   const now = new Date();
   const deadlineDate = new Date(deadline);
+  if (isNaN(deadlineDate.getTime())) return false;
   const diffTime = deadlineDate - now;
   const hours6 = 6 * 60 * 60 * 1000;
   return diffTime > 0 && diffTime <= hours6;

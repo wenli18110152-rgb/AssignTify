@@ -18,7 +18,7 @@ const Dashboard = () => {
   const { studyBuddy, setStudyBuddy, getBuddyData, getBuddyMessage } = useStudyBuddy();
   const buddy = getBuddyData();
   const { 
-    tasks, 
+    tasks: rawTasks, 
     addTask,
     getTodaysFocus, 
     getSummaryStats, 
@@ -32,6 +32,14 @@ const Dashboard = () => {
     getUnifiedWorkload,
     getProgressStats
   } = useTasks();
+
+  // Normalize tasks: ensure `completed` is always a strict boolean
+  // This prevents bugs where Supabase returns completed as a string ("false")
+  // or other truthy non-boolean values, which would hide all tasks from the UI.
+  const tasks = rawTasks.map(t => ({
+    ...t,
+    completed: t.completed === true || t.completed === 'true'
+  }));
 
   const [filterRisk, setFilterRisk] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -296,15 +304,35 @@ const Dashboard = () => {
   };
   const motivation = getMotivationalMessage();
 
-  const academicHealth = calculateAcademicHealth(tasks);
-  const smartRec = getSmartRecommendation(tasks);
-  const loadForecast = calculateStudyLoadForecast(tasks);
-  const studentInsights = getStudentInsights(tasks);
-  const legacyWorkload = getWorkloadSummary(tasks);
-  const momentum = getStudyMomentum(tasks);
-  const deadlineOverview = getDeadlineOverview(tasks);
-  const weeklyInsights = getWeeklyInsights(tasks);
-  const progressStats = getProgressStats();
+  // Safe defaults in case any utility throws due to unexpected task data
+  const safeAcademicHealth = { score: 100, level: 'Excellent', explanation: '', factors: { overdueCount: 0, completedCount: 0, totalCount: 0, upcomingUrgent: 0, weeklyHours: 0 }, breakdown: {} };
+  const safeMomentum = { status: 'idle', label: 'Ready', description: '', progressPercent: 0, nextMilestone: '' };
+  const safeDeadlineOverview = { total: 0, overdue: 0, dueToday: 0, dueThisWeek: 0, summary: '', deadlines: [] };
+  const safeWeeklyInsights = { busiestDay: null, quietestDay: null, peakHours: 0, avgDailyHours: 0, totalWeekHours: 0, dailyHours: null, recommendation: '' };
+
+  let academicHealth = safeAcademicHealth;
+  let smartRec = null;
+  let loadForecast = [];
+  let studentInsights = [];
+  let legacyWorkload = { totalWeeklyHours: 0, busiestDay: null, busiestDayHours: 0, activeTasks: 0, load: 'Balanced' };
+  let momentum = safeMomentum;
+  let deadlineOverview = safeDeadlineOverview;
+  let weeklyInsights = safeWeeklyInsights;
+  let progressStats = getProgressStats();
+
+  try {
+    academicHealth = calculateAcademicHealth(tasks);
+    smartRec = getSmartRecommendation(tasks);
+    loadForecast = calculateStudyLoadForecast(tasks);
+    studentInsights = getStudentInsights(tasks);
+    legacyWorkload = getWorkloadSummary(tasks);
+    momentum = getStudyMomentum(tasks);
+    deadlineOverview = getDeadlineOverview(tasks);
+    weeklyInsights = getWeeklyInsights(tasks);
+    progressStats = getProgressStats();
+  } catch (err) {
+    console.error('Dashboard utility error (tasks will still render):', err);
+  }
 
   const handleLoadDemoData = () => {
     enterDemoMode();
