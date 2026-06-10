@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
-import { calculateRisk, getDaysUntilDeadline, getRiskColor, calculateRiskScore, getRiskLevel, getRiskLevelColor } from '../../utils/riskCalculator';
+import { calculateRisk, getDaysUntilDeadline, getRiskColor } from '../../utils/riskCalculator';
 import { getSupportiveMessage, getWhyItMatters, getNextAction, getReminderSuggestion } from '../../utils/messages';
 import Icons from '../../utils/icons';
 import './TaskDetail.css';
@@ -29,8 +29,6 @@ const TaskDetail = () => {
   }
 
   const risk = calculateRisk(task.deadline, task.priority, task.hoursPerDay);
-  const riskScore = calculateRiskScore(task.deadline, task.priority, task.hoursPerDay);
-  const riskLevel = getRiskLevel(riskScore);
   const daysUntilDeadline = getDaysUntilDeadline(task.deadline);
   const supportiveMessage = getSupportiveMessage(risk, daysUntilDeadline);
   const whyItMatters = getWhyItMatters(risk, daysUntilDeadline);
@@ -89,7 +87,6 @@ const TaskDetail = () => {
           {/* Risk Badge */}
           <div className="risk-section">
             <span className={`risk-badge md ${risk.toLowerCase()}`}>{risk} Risk</span>
-            <span className={`risk-score-badge ${riskLevel.toLowerCase()}`}>{riskScore}</span>
             {task.completed && (
               <span className="completed-badge">Task Completed</span>
             )}
